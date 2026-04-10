@@ -1,0 +1,201 @@
+[
+  {
+    "category_name": "Finance",
+    "tool_name": "alpha_vantage",
+    "api_name": "get_stock_quote",
+    "api_description": "Get real-time stock price and trading information",
+    "required_parameters": [
+      {
+        "name": "symbol",
+        "type": "string",
+        "description": "Stock ticker symbol (e.g., AAPL)"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "exchange",
+        "type": "string",
+        "description": "Stock exchange (NYSE, NASDAQ)"
+      }
+    ],
+    "response": {
+      "properties": {
+        "stock_id": {
+          "type": "string",
+          "description": "Internal stock identifier"
+        },
+        "symbol": {
+          "type": "string",
+          "description": "Ticker symbol"
+        },
+        "price": {
+          "type": "number",
+          "description": "Current price"
+        },
+        "change": {
+          "type": "number",
+          "description": "Price change today"
+        },
+        "change_percent": {
+          "type": "number",
+          "description": "Percentage change"
+        },
+        "volume": {
+          "type": "number",
+          "description": "Trading volume"
+        },
+        "market_cap": {
+          "type": "number",
+          "description": "Market capitalization"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Finance",
+    "tool_name": "alpha_vantage",
+    "api_name": "get_stock_history",
+    "api_description": "Get historical price data for a stock",
+    "required_parameters": [
+      {
+        "name": "symbol",
+        "type": "string",
+        "description": "Stock ticker symbol"
+      },
+      {
+        "name": "period",
+        "type": "string",
+        "description": "1d | 5d | 1m | 3m | 1y"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "interval",
+        "type": "string",
+        "description": "Data interval: 1min | 5min | daily"
+      }
+    ],
+    "response": {
+      "properties": {
+        "history_id": {
+          "type": "string",
+          "description": "History record ID"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date"
+        },
+        "open": {
+          "type": "number",
+          "description": "Opening price"
+        },
+        "close": {
+          "type": "number",
+          "description": "Closing price"
+        },
+        "high": {
+          "type": "number",
+          "description": "Daily high"
+        },
+        "low": {
+          "type": "number",
+          "description": "Daily low"
+        },
+        "volume": {
+          "type": "number",
+          "description": "Trading volume"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Finance",
+    "tool_name": "currency_exchange",
+    "api_name": "convert_currency",
+    "api_description": "Convert an amount from one currency to another",
+    "required_parameters": [
+      {
+        "name": "from_currency",
+        "type": "string",
+        "description": "Source currency code (e.g., USD)"
+      },
+      {
+        "name": "to_currency",
+        "type": "string",
+        "description": "Target currency code"
+      },
+      {
+        "name": "amount",
+        "type": "number",
+        "description": "Amount to convert"
+      }
+    ],
+    "optional_parameters": [],
+    "response": {
+      "properties": {
+        "conversion_id": {
+          "type": "string",
+          "description": "Conversion transaction ID"
+        },
+        "converted_amount": {
+          "type": "number",
+          "description": "Converted amount"
+        },
+        "exchange_rate": {
+          "type": "number",
+          "description": "Exchange rate used"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Conversion timestamp"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Finance",
+    "tool_name": "portfolio_tracker",
+    "api_name": "add_to_watchlist",
+    "api_description": "Add a stock to the user's watchlist for tracking",
+    "required_parameters": [
+      {
+        "name": "symbol",
+        "type": "string",
+        "description": "Stock ticker symbol to watch"
+      },
+      {
+        "name": "user_id",
+        "type": "string",
+        "description": "User account ID"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "alert_price",
+        "type": "number",
+        "description": "Price alert threshold"
+      },
+      {
+        "name": "notes",
+        "type": "string",
+        "description": "Personal notes about this stock"
+      }
+    ],
+    "response": {
+      "properties": {
+        "watchlist_id": {
+          "type": "string",
+          "description": "Watchlist entry ID"
+        },
+        "status": {
+          "type": "string",
+          "description": "success | already_exists"
+        },
+        "added_at": {
+          "type": "string",
+          "description": "Timestamp when added"
+        }
+      }
+    }
+  }
+]

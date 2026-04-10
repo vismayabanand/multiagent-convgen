@@ -1,0 +1,24 @@
+{
+  "tool_use_counts": {
+    "Finance/alpha_vantage/get_stock_quote": 2,
+    "Travel/booking_com/search_hotels": 1,
+    "Food/yelp/search_restaurants": 2,
+    "Health/medical_api/search_symptoms": 1,
+    "Health/pharmacy_api/find_medication": 1,
+    "Shopping/amazon_search/search_products": 1
+  },
+  "tool_pair_counts": {
+    "('Health/medical_api/search_symptoms', 'Health/pharmacy_api/find_medication')": 1
+  },
+  "domain_counts": {
+    "Finance": 2,
+    "Travel": 2,
+    "Productivity": 2,
+    "Food": 1,
+    "Health": 1,
+    "Shopping": 1
+  },
+  "pattern_counts": {
+    "sequential": 9
+  }
+}

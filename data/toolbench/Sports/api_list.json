@@ -1,0 +1,166 @@
+[
+  {
+    "category_name": "Sports",
+    "tool_name": "espn_api",
+    "api_name": "get_scores",
+    "api_description": "Get live or recent scores for a sport",
+    "required_parameters": [
+      {
+        "name": "sport",
+        "type": "string",
+        "description": "Sport type: nba | nfl | mlb | soccer"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "date",
+        "type": "string",
+        "description": "Date for scores (YYYY-MM-DD), defaults to today"
+      },
+      {
+        "name": "league",
+        "type": "string",
+        "description": "Specific league name"
+      }
+    ],
+    "response": {
+      "properties": {
+        "game_id": {
+          "type": "string",
+          "description": "Game identifier"
+        },
+        "home_team": {
+          "type": "string",
+          "description": "Home team name"
+        },
+        "away_team": {
+          "type": "string",
+          "description": "Away team name"
+        },
+        "home_score": {
+          "type": "number",
+          "description": "Home team score"
+        },
+        "away_score": {
+          "type": "number",
+          "description": "Away team score"
+        },
+        "status": {
+          "type": "string",
+          "description": "live | final | scheduled"
+        },
+        "quarter": {
+          "type": "string",
+          "description": "Current period or quarter"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Sports",
+    "tool_name": "espn_api",
+    "api_name": "get_game_details",
+    "api_description": "Get detailed statistics for a specific game",
+    "required_parameters": [
+      {
+        "name": "game_id",
+        "type": "string",
+        "description": "Game ID from scores endpoint"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "include_play_by_play",
+        "type": "boolean",
+        "description": "Include play-by-play data"
+      }
+    ],
+    "response": {
+      "properties": {
+        "detail_id": {
+          "type": "string",
+          "description": "Detail record ID"
+        },
+        "top_scorer": {
+          "type": "string",
+          "description": "Top scoring player"
+        },
+        "total_points": {
+          "type": "number",
+          "description": "Total combined points"
+        },
+        "attendance": {
+          "type": "number",
+          "description": "Game attendance"
+        },
+        "venue": {
+          "type": "string",
+          "description": "Stadium or arena name"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Sports",
+    "tool_name": "ticketmaster",
+    "api_name": "find_sports_tickets",
+    "api_description": "Find tickets for sporting events",
+    "required_parameters": [
+      {
+        "name": "event_type",
+        "type": "string",
+        "description": "Sport or event type"
+      },
+      {
+        "name": "city",
+        "type": "string",
+        "description": "City to find events in"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "max_price",
+        "type": "number",
+        "description": "Maximum ticket price"
+      },
+      {
+        "name": "date_from",
+        "type": "string",
+        "description": "Start date range"
+      },
+      {
+        "name": "date_to",
+        "type": "string",
+        "description": "End date range"
+      }
+    ],
+    "response": {
+      "properties": {
+        "ticket_id": {
+          "type": "string",
+          "description": "Ticket listing ID"
+        },
+        "event_name": {
+          "type": "string",
+          "description": "Event name"
+        },
+        "date": {
+          "type": "string",
+          "description": "Event date"
+        },
+        "venue": {
+          "type": "string",
+          "description": "Venue name"
+        },
+        "price": {
+          "type": "number",
+          "description": "Ticket price"
+        },
+        "section": {
+          "type": "string",
+          "description": "Seating section"
+        }
+      }
+    }
+  }
+]

@@ -1,0 +1,104 @@
+[
+  {
+    "category_name": "Health",
+    "tool_name": "medical_api",
+    "api_name": "search_symptoms",
+    "api_description": "Search for information about medical symptoms",
+    "required_parameters": [
+      {
+        "name": "symptom",
+        "type": "string",
+        "description": "Symptom to look up"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "age_group",
+        "type": "string",
+        "description": "child | adult | elderly"
+      },
+      {
+        "name": "severity",
+        "type": "string",
+        "description": "mild | moderate | severe"
+      }
+    ],
+    "response": {
+      "properties": {
+        "symptom_id": {
+          "type": "string",
+          "description": "Symptom record ID"
+        },
+        "description": {
+          "type": "string",
+          "description": "Symptom description"
+        },
+        "possible_causes": {
+          "type": "string",
+          "description": "Possible causes"
+        },
+        "urgency_level": {
+          "type": "string",
+          "description": "Urgency: low | medium | high"
+        },
+        "recommended_action": {
+          "type": "string",
+          "description": "Recommended course of action"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Health",
+    "tool_name": "pharmacy_api",
+    "api_name": "find_medication",
+    "api_description": "Look up medication information and availability",
+    "required_parameters": [
+      {
+        "name": "medication_name",
+        "type": "string",
+        "description": "Name of medication"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "generic_ok",
+        "type": "boolean",
+        "description": "Accept generic alternatives"
+      },
+      {
+        "name": "pharmacy_zip",
+        "type": "string",
+        "description": "Zip code to find nearby pharmacies"
+      }
+    ],
+    "response": {
+      "properties": {
+        "medication_id": {
+          "type": "string",
+          "description": "Medication identifier"
+        },
+        "brand_name": {
+          "type": "string",
+          "description": "Brand name"
+        },
+        "generic_name": {
+          "type": "string",
+          "description": "Generic name"
+        },
+        "dosage_forms": {
+          "type": "string",
+          "description": "Available dosage forms"
+        },
+        "requires_prescription": {
+          "type": "boolean",
+          "description": "Prescription required"
+        },
+        "average_price": {
+          "type": "number",
+          "description": "Average retail price"
+        }
+      }
+    }
+  }
+]

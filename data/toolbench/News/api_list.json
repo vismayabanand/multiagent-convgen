@@ -1,0 +1,109 @@
+[
+  {
+    "category_name": "News",
+    "tool_name": "newsapi",
+    "api_name": "search_news",
+    "api_description": "Search for news articles by keyword or topic",
+    "required_parameters": [
+      {
+        "name": "query",
+        "type": "string",
+        "description": "Search query or topic"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "language",
+        "type": "string",
+        "description": "Language code (en, es, fr)"
+      },
+      {
+        "name": "from_date",
+        "type": "string",
+        "description": "From date (YYYY-MM-DD)"
+      },
+      {
+        "name": "to_date",
+        "type": "string",
+        "description": "To date (YYYY-MM-DD)"
+      },
+      {
+        "name": "sort_by",
+        "type": "string",
+        "description": "relevancy | popularity | publishedAt"
+      }
+    ],
+    "response": {
+      "properties": {
+        "article_id": {
+          "type": "string",
+          "description": "Article identifier"
+        },
+        "title": {
+          "type": "string",
+          "description": "Article title"
+        },
+        "description": {
+          "type": "string",
+          "description": "Article summary"
+        },
+        "source": {
+          "type": "string",
+          "description": "News source name"
+        },
+        "published_at": {
+          "type": "string",
+          "description": "Publication timestamp"
+        },
+        "url": {
+          "type": "string",
+          "description": "Article URL"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "News",
+    "tool_name": "newsapi",
+    "api_name": "get_article_content",
+    "api_description": "Get the full text content of a news article by ID",
+    "required_parameters": [
+      {
+        "name": "article_id",
+        "type": "string",
+        "description": "Article ID from search results"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "include_related",
+        "type": "boolean",
+        "description": "Include related articles"
+      }
+    ],
+    "response": {
+      "properties": {
+        "content_id": {
+          "type": "string",
+          "description": "Content record ID"
+        },
+        "full_text": {
+          "type": "string",
+          "description": "Full article text"
+        },
+        "word_count": {
+          "type": "number",
+          "description": "Article word count"
+        },
+        "reading_time": {
+          "type": "number",
+          "description": "Estimated reading time in minutes"
+        },
+        "author": {
+          "type": "string",
+          "description": "Article author"
+        }
+      }
+    }
+  }
+]

@@ -1,0 +1,172 @@
+[
+  {
+    "category_name": "Maps",
+    "tool_name": "google_maps",
+    "api_name": "get_directions",
+    "api_description": "Get driving or transit directions between two locations",
+    "required_parameters": [
+      {
+        "name": "origin",
+        "type": "string",
+        "description": "Starting address or location"
+      },
+      {
+        "name": "destination",
+        "type": "string",
+        "description": "Destination address or location"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "mode",
+        "type": "string",
+        "description": "driving | walking | transit | cycling"
+      },
+      {
+        "name": "avoid",
+        "type": "string",
+        "description": "tolls | highways | ferries"
+      }
+    ],
+    "response": {
+      "properties": {
+        "route_id": {
+          "type": "string",
+          "description": "Route identifier"
+        },
+        "distance_km": {
+          "type": "number",
+          "description": "Total distance in km"
+        },
+        "duration_minutes": {
+          "type": "number",
+          "description": "Estimated travel time"
+        },
+        "steps": {
+          "type": "string",
+          "description": "Turn-by-turn directions"
+        },
+        "toll_cost": {
+          "type": "number",
+          "description": "Estimated toll cost"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Maps",
+    "tool_name": "google_maps",
+    "api_name": "search_nearby",
+    "api_description": "Find nearby places of interest (restaurants, gas stations, etc.)",
+    "required_parameters": [
+      {
+        "name": "location",
+        "type": "string",
+        "description": "Center location for search"
+      },
+      {
+        "name": "place_type",
+        "type": "string",
+        "description": "Type: restaurant | gas_station | hospital | etc"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "radius_km",
+        "type": "number",
+        "description": "Search radius in km"
+      },
+      {
+        "name": "min_rating",
+        "type": "number",
+        "description": "Minimum Google rating"
+      }
+    ],
+    "response": {
+      "properties": {
+        "place_id": {
+          "type": "string",
+          "description": "Place identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Place name"
+        },
+        "address": {
+          "type": "string",
+          "description": "Full address"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Google rating"
+        },
+        "distance_km": {
+          "type": "number",
+          "description": "Distance from search center"
+        },
+        "open_now": {
+          "type": "boolean",
+          "description": "Currently open"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Maps",
+    "tool_name": "parking_api",
+    "api_name": "find_parking",
+    "api_description": "Find available parking near a location",
+    "required_parameters": [
+      {
+        "name": "location",
+        "type": "string",
+        "description": "Location to find parking near"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "max_price_per_hour",
+        "type": "number",
+        "description": "Maximum hourly rate"
+      },
+      {
+        "name": "duration_hours",
+        "type": "number",
+        "description": "Expected parking duration"
+      },
+      {
+        "name": "ev_charging",
+        "type": "boolean",
+        "description": "Require EV charging"
+      }
+    ],
+    "response": {
+      "properties": {
+        "parking_id": {
+          "type": "string",
+          "description": "Parking lot identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Parking lot name"
+        },
+        "address": {
+          "type": "string",
+          "description": "Parking lot address"
+        },
+        "price_per_hour": {
+          "type": "number",
+          "description": "Hourly rate"
+        },
+        "available_spots": {
+          "type": "number",
+          "description": "Available parking spots"
+        },
+        "distance_meters": {
+          "type": "number",
+          "description": "Distance from target location"
+        }
+      }
+    }
+  }
+]

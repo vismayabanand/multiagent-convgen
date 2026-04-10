@@ -1,0 +1,169 @@
+[
+  {
+    "category_name": "Food",
+    "tool_name": "yelp",
+    "api_name": "search_restaurants",
+    "api_description": "Search for restaurants by location and cuisine type",
+    "required_parameters": [
+      {
+        "name": "location",
+        "type": "string",
+        "description": "City or neighborhood"
+      },
+      {
+        "name": "cuisine",
+        "type": "string",
+        "description": "Cuisine type (italian, sushi, etc.)"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "price_range",
+        "type": "string",
+        "description": "$ | $$ | $$$ | $$$$"
+      },
+      {
+        "name": "min_rating",
+        "type": "number",
+        "description": "Minimum Yelp rating (1-5)"
+      },
+      {
+        "name": "open_now",
+        "type": "boolean",
+        "description": "Only show currently open restaurants"
+      }
+    ],
+    "response": {
+      "properties": {
+        "restaurant_id": {
+          "type": "string",
+          "description": "Restaurant identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Restaurant name"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Yelp rating"
+        },
+        "price_range": {
+          "type": "string",
+          "description": "Price range indicator"
+        },
+        "address": {
+          "type": "string",
+          "description": "Street address"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Food",
+    "tool_name": "opentable",
+    "api_name": "book_table",
+    "api_description": "Make a restaurant reservation using the restaurant ID",
+    "required_parameters": [
+      {
+        "name": "restaurant_id",
+        "type": "string",
+        "description": "Restaurant ID from search"
+      },
+      {
+        "name": "date",
+        "type": "string",
+        "description": "Reservation date (YYYY-MM-DD)"
+      },
+      {
+        "name": "time",
+        "type": "string",
+        "description": "Reservation time (HH:MM)"
+      },
+      {
+        "name": "party_size",
+        "type": "number",
+        "description": "Number of diners"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "special_occasion",
+        "type": "string",
+        "description": "birthday | anniversary | business"
+      },
+      {
+        "name": "dietary_restrictions",
+        "type": "string",
+        "description": "Any dietary needs"
+      }
+    ],
+    "response": {
+      "properties": {
+        "reservation_id": {
+          "type": "string",
+          "description": "Reservation reference"
+        },
+        "status": {
+          "type": "string",
+          "description": "confirmed | waitlisted"
+        },
+        "confirmation_number": {
+          "type": "string",
+          "description": "Confirmation number"
+        },
+        "table_number": {
+          "type": "number",
+          "description": "Reserved table number"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Food",
+    "tool_name": "yelp",
+    "api_name": "get_menu",
+    "api_description": "Get the menu for a specific restaurant",
+    "required_parameters": [
+      {
+        "name": "restaurant_id",
+        "type": "string",
+        "description": "Restaurant ID"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "section",
+        "type": "string",
+        "description": "Menu section: appetizers | mains | desserts"
+      }
+    ],
+    "response": {
+      "properties": {
+        "item_id": {
+          "type": "string",
+          "description": "Menu item identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Item name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Item description"
+        },
+        "price": {
+          "type": "number",
+          "description": "Item price"
+        },
+        "category": {
+          "type": "string",
+          "description": "Menu category"
+        }
+      }
+    }
+  }
+]

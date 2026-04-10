@@ -1,0 +1,302 @@
+[
+  {
+    "category_name": "Travel",
+    "tool_name": "booking_com",
+    "api_name": "search_hotels",
+    "api_description": "Search for available hotels in a city with optional filters",
+    "required_parameters": [
+      {
+        "name": "city",
+        "type": "string",
+        "description": "City name"
+      },
+      {
+        "name": "check_in_date",
+        "type": "string",
+        "description": "Check-in date (YYYY-MM-DD)"
+      },
+      {
+        "name": "check_out_date",
+        "type": "string",
+        "description": "Check-out date (YYYY-MM-DD)"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "max_price",
+        "type": "number",
+        "description": "Maximum price per night in USD"
+      },
+      {
+        "name": "min_rating",
+        "type": "number",
+        "description": "Minimum rating (1-5)"
+      },
+      {
+        "name": "num_guests",
+        "type": "number",
+        "description": "Number of guests"
+      }
+    ],
+    "response": {
+      "properties": {
+        "hotel_id": {
+          "type": "string",
+          "description": "Unique hotel identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Hotel name"
+        },
+        "price_per_night": {
+          "type": "number",
+          "description": "Price per night"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Hotel rating"
+        },
+        "address": {
+          "type": "string",
+          "description": "Hotel address"
+        },
+        "available_rooms": {
+          "type": "number",
+          "description": "Available rooms"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Travel",
+    "tool_name": "booking_com",
+    "api_name": "book_hotel",
+    "api_description": "Book a hotel room using a hotel ID obtained from search",
+    "required_parameters": [
+      {
+        "name": "hotel_id",
+        "type": "string",
+        "description": "Hotel ID from search results"
+      },
+      {
+        "name": "check_in_date",
+        "type": "string",
+        "description": "Check-in date"
+      },
+      {
+        "name": "check_out_date",
+        "type": "string",
+        "description": "Check-out date"
+      },
+      {
+        "name": "guest_name",
+        "type": "string",
+        "description": "Full name of the guest"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "num_rooms",
+        "type": "number",
+        "description": "Number of rooms to book"
+      },
+      {
+        "name": "special_requests",
+        "type": "string",
+        "description": "Special requests"
+      }
+    ],
+    "response": {
+      "properties": {
+        "booking_id": {
+          "type": "string",
+          "description": "Unique booking reference"
+        },
+        "status": {
+          "type": "string",
+          "description": "Booking status"
+        },
+        "confirmation_code": {
+          "type": "string",
+          "description": "Confirmation code"
+        },
+        "total_price": {
+          "type": "number",
+          "description": "Total price for the stay"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Travel",
+    "tool_name": "booking_com",
+    "api_name": "get_hotel_reviews",
+    "api_description": "Get customer reviews for a specific hotel",
+    "required_parameters": [
+      {
+        "name": "hotel_id",
+        "type": "string",
+        "description": "Hotel ID to get reviews for"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "limit",
+        "type": "number",
+        "description": "Max number of reviews to return"
+      },
+      {
+        "name": "sort_by",
+        "type": "string",
+        "description": "Sort order: recent | rating"
+      }
+    ],
+    "response": {
+      "properties": {
+        "review_id": {
+          "type": "string",
+          "description": "Review identifier"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Reviewer rating"
+        },
+        "comment": {
+          "type": "string",
+          "description": "Review text"
+        },
+        "reviewer_name": {
+          "type": "string",
+          "description": "Name of reviewer"
+        },
+        "date": {
+          "type": "string",
+          "description": "Review date"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Travel",
+    "tool_name": "skyscanner",
+    "api_name": "search_flights",
+    "api_description": "Search for available flights between two airports",
+    "required_parameters": [
+      {
+        "name": "origin",
+        "type": "string",
+        "description": "Origin airport code (e.g., JFK)"
+      },
+      {
+        "name": "destination",
+        "type": "string",
+        "description": "Destination airport code"
+      },
+      {
+        "name": "departure_date",
+        "type": "string",
+        "description": "Departure date (YYYY-MM-DD)"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "return_date",
+        "type": "string",
+        "description": "Return date for round trip"
+      },
+      {
+        "name": "passengers",
+        "type": "number",
+        "description": "Number of passengers"
+      },
+      {
+        "name": "cabin_class",
+        "type": "string",
+        "description": "economy | business | first"
+      }
+    ],
+    "response": {
+      "properties": {
+        "flight_id": {
+          "type": "string",
+          "description": "Flight identifier"
+        },
+        "airline": {
+          "type": "string",
+          "description": "Airline name"
+        },
+        "departure_time": {
+          "type": "string",
+          "description": "Departure time"
+        },
+        "arrival_time": {
+          "type": "string",
+          "description": "Arrival time"
+        },
+        "price": {
+          "type": "number",
+          "description": "Price per passenger"
+        },
+        "stops": {
+          "type": "number",
+          "description": "Number of stops"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Travel",
+    "tool_name": "skyscanner",
+    "api_name": "book_flight",
+    "api_description": "Book a flight using a flight ID obtained from search",
+    "required_parameters": [
+      {
+        "name": "flight_id",
+        "type": "string",
+        "description": "Flight ID from search results"
+      },
+      {
+        "name": "passenger_name",
+        "type": "string",
+        "description": "Full passenger name"
+      },
+      {
+        "name": "passport_number",
+        "type": "string",
+        "description": "Passport number"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "seat_preference",
+        "type": "string",
+        "description": "window | aisle | middle"
+      },
+      {
+        "name": "add_luggage",
+        "type": "boolean",
+        "description": "Add checked luggage"
+      }
+    ],
+    "response": {
+      "properties": {
+        "booking_ref": {
+          "type": "string",
+          "description": "Booking reference code"
+        },
+        "status": {
+          "type": "string",
+          "description": "Booking status"
+        },
+        "seat_number": {
+          "type": "string",
+          "description": "Assigned seat number"
+        },
+        "boarding_pass_url": {
+          "type": "string",
+          "description": "URL to download boarding pass"
+        }
+      }
+    }
+  }
+]

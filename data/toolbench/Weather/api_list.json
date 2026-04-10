@@ -1,0 +1,152 @@
+[
+  {
+    "category_name": "Weather",
+    "tool_name": "openweathermap",
+    "api_name": "get_current_weather",
+    "api_description": "Get current weather conditions for a city",
+    "required_parameters": [
+      {
+        "name": "city",
+        "type": "string",
+        "description": "City name"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "units",
+        "type": "string",
+        "description": "metric | imperial | kelvin"
+      },
+      {
+        "name": "country_code",
+        "type": "string",
+        "description": "ISO country code"
+      }
+    ],
+    "response": {
+      "properties": {
+        "temperature": {
+          "type": "number",
+          "description": "Current temperature"
+        },
+        "feels_like": {
+          "type": "number",
+          "description": "Feels like temperature"
+        },
+        "humidity": {
+          "type": "number",
+          "description": "Humidity percentage"
+        },
+        "description": {
+          "type": "string",
+          "description": "Weather description"
+        },
+        "wind_speed": {
+          "type": "number",
+          "description": "Wind speed"
+        },
+        "visibility": {
+          "type": "number",
+          "description": "Visibility in meters"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Weather",
+    "tool_name": "openweathermap",
+    "api_name": "get_forecast",
+    "api_description": "Get 5-day weather forecast for a city",
+    "required_parameters": [
+      {
+        "name": "city",
+        "type": "string",
+        "description": "City name"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "days",
+        "type": "number",
+        "description": "Number of forecast days (1-5)"
+      },
+      {
+        "name": "units",
+        "type": "string",
+        "description": "metric | imperial"
+      }
+    ],
+    "response": {
+      "properties": {
+        "forecast_id": {
+          "type": "string",
+          "description": "Forecast ID"
+        },
+        "date": {
+          "type": "string",
+          "description": "Forecast date"
+        },
+        "high_temp": {
+          "type": "number",
+          "description": "High temperature"
+        },
+        "low_temp": {
+          "type": "number",
+          "description": "Low temperature"
+        },
+        "precipitation_chance": {
+          "type": "number",
+          "description": "Chance of rain (%)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Forecast description"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Weather",
+    "tool_name": "weather_alerts",
+    "api_name": "get_alerts",
+    "api_description": "Get active weather alerts and warnings for a region",
+    "required_parameters": [
+      {
+        "name": "region",
+        "type": "string",
+        "description": "Region or city name"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "severity",
+        "type": "string",
+        "description": "minor | moderate | severe | extreme"
+      }
+    ],
+    "response": {
+      "properties": {
+        "alert_id": {
+          "type": "string",
+          "description": "Alert identifier"
+        },
+        "type": {
+          "type": "string",
+          "description": "Alert type (e.g., tornado watch)"
+        },
+        "severity": {
+          "type": "string",
+          "description": "Alert severity"
+        },
+        "message": {
+          "type": "string",
+          "description": "Alert message"
+        },
+        "expires": {
+          "type": "string",
+          "description": "Alert expiration time"
+        }
+      }
+    }
+  }
+]

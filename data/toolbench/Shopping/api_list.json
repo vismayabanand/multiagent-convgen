@@ -1,0 +1,153 @@
+[
+  {
+    "category_name": "Shopping",
+    "tool_name": "amazon_search",
+    "api_name": "search_products",
+    "api_description": "Search for products on Amazon by keyword",
+    "required_parameters": [
+      {
+        "name": "keyword",
+        "type": "string",
+        "description": "Product search keyword"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "max_price",
+        "type": "number",
+        "description": "Maximum price"
+      },
+      {
+        "name": "min_rating",
+        "type": "number",
+        "description": "Minimum customer rating"
+      },
+      {
+        "name": "prime_only",
+        "type": "boolean",
+        "description": "Only Prime-eligible items"
+      },
+      {
+        "name": "category",
+        "type": "string",
+        "description": "Product category"
+      }
+    ],
+    "response": {
+      "properties": {
+        "product_id": {
+          "type": "string",
+          "description": "Product ASIN or identifier"
+        },
+        "name": {
+          "type": "string",
+          "description": "Product name"
+        },
+        "price": {
+          "type": "number",
+          "description": "Product price"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Customer rating"
+        },
+        "review_count": {
+          "type": "number",
+          "description": "Number of reviews"
+        },
+        "prime_eligible": {
+          "type": "boolean",
+          "description": "Prime eligible"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Shopping",
+    "tool_name": "amazon_search",
+    "api_name": "get_product_details",
+    "api_description": "Get detailed information about a specific product",
+    "required_parameters": [
+      {
+        "name": "product_id",
+        "type": "string",
+        "description": "Product ID from search results"
+      }
+    ],
+    "optional_parameters": [],
+    "response": {
+      "properties": {
+        "detail_id": {
+          "type": "string",
+          "description": "Detail record ID"
+        },
+        "description": {
+          "type": "string",
+          "description": "Full product description"
+        },
+        "dimensions": {
+          "type": "string",
+          "description": "Product dimensions"
+        },
+        "weight": {
+          "type": "number",
+          "description": "Product weight"
+        },
+        "in_stock": {
+          "type": "boolean",
+          "description": "Whether item is in stock"
+        },
+        "shipping_days": {
+          "type": "number",
+          "description": "Estimated shipping days"
+        }
+      }
+    }
+  },
+  {
+    "category_name": "Shopping",
+    "tool_name": "amazon_cart",
+    "api_name": "add_to_cart",
+    "api_description": "Add a product to the shopping cart",
+    "required_parameters": [
+      {
+        "name": "product_id",
+        "type": "string",
+        "description": "Product ID to add"
+      },
+      {
+        "name": "quantity",
+        "type": "number",
+        "description": "Quantity to add"
+      }
+    ],
+    "optional_parameters": [
+      {
+        "name": "size",
+        "type": "string",
+        "description": "Product size if applicable"
+      },
+      {
+        "name": "color",
+        "type": "string",
+        "description": "Product color if applicable"
+      }
+    ],
+    "response": {
+      "properties": {
+        "cart_item_id": {
+          "type": "string",
+          "description": "Cart item identifier"
+        },
+        "cart_total": {
+          "type": "number",
+          "description": "Current cart total"
+        },
+        "status": {
+          "type": "string",
+          "description": "added | out_of_stock | limit_exceeded"
+        }
+      }
+    }
+  }
+]
