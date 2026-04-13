@@ -2,84 +2,117 @@
 
 Generates synthetic multi-turn conversations with multi-step tool-use traces, grounded in ToolBench tool schemas. Suitable for training and evaluating tool-use agents.
 
-## Quick Start
+---
 
-### Prerequisites
+## Prerequisites
 
 - Python 3.10+
-- An API key for one of: Groq (free tier), OpenAI, or Anthropic
+- An OpenAI or Anthropic API key
 
-### Install
+---
+
+## Installation
 
 ```bash
-cd /path/to/repo
+git clone <repo-url>
+cd <repo>
 pip install -e ".[dev]"
 ```
 
-Create a `.env` file with **any one** of these keys (auto-detected in priority order):
+Create a `.env` file in the repo root with your API key:
 
 ```bash
-GROQ_API_KEY=gsk_...        # free tier — llama-3.1-8b-instant (recommended for testing)
-OPENAI_API_KEY=sk-...       # gpt-4o-mini
-ANTHROPIC_API_KEY=sk-ant-...  # claude-haiku-4-5-20251001
+# .env
+OPENAI_API_KEY=sk-...
+# OR
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-### End-to-end pipeline
+---
+
+## Running the Pipeline
+
+The pre-built artifacts (`registry.pkl`, `graph.pkl`) are already committed to the repo under `artifacts/`. You do **not** need to run `toolgen build` unless you want to rebuild from raw ToolBench data.
+
+### Step 1 — Generate conversations
 
 ```bash
-# 1. Build artifacts from ToolBench data
-toolgen build --data-dir ./data/toolbench --output-dir ./artifacts
-
-# 2. Generate conversations (Run B — steering enabled)
+# Run B: cross-conversation steering enabled (primary run)
 toolgen generate \
   --artifacts-dir ./artifacts \
-  --output ./output/dataset_B.jsonl \
+  --output ./output/run_B.jsonl \
   --n 100 \
   --seed 42
 
-# 3. Generate conversations (Run A — steering disabled, for diversity experiment)
+# Run A: steering disabled (for diversity experiment comparison)
 toolgen generate \
   --artifacts-dir ./artifacts \
-  --output ./output/dataset_A.jsonl \
+  --output ./output/run_A.jsonl \
   --n 100 \
   --seed 42 \
   --no-cross-conversation-steering
-
-# 4. Evaluate either dataset
-toolgen evaluate --dataset ./output/dataset_B.jsonl --output ./output/report_B.json
-toolgen evaluate --dataset ./output/dataset_A.jsonl --output ./output/report_A.json
 ```
+
+Pre-generated datasets (`output/run_A.jsonl`, `output/run_B.jsonl`) are also already in the repo if you want to skip generation.
+
+### Step 2 — Evaluate
+
+```bash
+toolgen evaluate --dataset ./output/run_B.jsonl --output ./output/report_B.json
+toolgen evaluate --dataset ./output/run_A.jsonl --output ./output/report_A.json
+```
+
+### Step 3 — Run tests
+
+```bash
+# Unit + integration tests (no API key needed)
+pytest tests/unit/ tests/integration/ -v
+
+# End-to-end test against pre-generated dataset (no API key needed)
+pytest tests/e2e/ --run-e2e --e2e-dataset ./output/run_B.jsonl -v
+```
+
+---
+
+## Rebuilding from Raw ToolBench Data (optional)
+
+If you want to rebuild the artifacts from scratch:
+
+```bash
+# Download ToolBench tool data
+git clone https://github.com/OpenBMB/ToolBench.git
+# Tool JSON files are under: ToolBench/data/toolenv/tools/
+
+toolgen build \
+  --data-dir ./ToolBench/data/toolenv/tools/ \
+  --output-dir ./artifacts
+```
+
+Then proceed with Step 1 above.
+
+---
 
 ## CLI Reference
 
 ### `toolgen build`
-
-Ingests ToolBench JSON and builds all derived artifacts.
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--data-dir` | required | Path to ToolBench data directory or JSON file |
 | `--output-dir` | `./artifacts` | Where to write artifacts |
 | `--min-confidence` | `0.25` | Minimum edge confidence for Tool Graph |
-| `--limit` | None | Limit number of tools (for testing) |
-
-Artifacts produced:
-- `artifacts/registry.pkl` — normalized Tool registry
-- `artifacts/graph.pkl` — Tool Graph (networkx DiGraph)
-- `artifacts/stats.json` — graph statistics
+| `--limit` | None | Limit number of tools loaded (for testing) |
 
 ### `toolgen generate`
 
-Generates synthetic conversations from the built artifacts.
-
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--artifacts-dir` | `./artifacts` | Artifacts directory |
+| `--artifacts-dir` | `./artifacts` | Directory with build artifacts |
 | `--output` | `./output/dataset.jsonl` | Output JSONL path |
 | `--n` | `100` | Number of conversations to generate |
 | `--seed` | `42` | Random seed |
 | `--model` | `gpt-4o-mini` | LLM model to use |
-| `--provider` | `auto` | `auto` \| `groq` \| `openai` \| `anthropic` |
+| `--provider` | `auto` | `auto` \| `openai` \| `anthropic` |
 | `--no-cross-conversation-steering` | False | Disable diversity steering (Run A) |
 | `--min-steps` | `2` | Minimum tool steps per chain |
 | `--max-steps` | `5` | Maximum tool steps per chain |
@@ -87,26 +120,28 @@ Generates synthetic conversations from the built artifacts.
 
 ### `toolgen evaluate`
 
-Reads a JSONL dataset and computes evaluation metrics.
-
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--dataset` | required | Path to JSONL file |
 | `--output` | None | Write JSON report to this path |
 | `--threshold` | `3.5` | Score threshold for pass/fail |
 
-## Running Tests
+---
 
-```bash
-# All tests
-pytest tests/ -v
+## Diversity Experiment Results
 
-# Unit tests only
-pytest tests/unit/ -v
+Two runs at N=200, seed=42, model=gpt-4o-mini:
 
-# Integration test (retry/repair loop — no API key needed, uses mocks)
-pytest tests/integration/test_retry_repair.py -v
-```
+| Metric | Run A (no steering) | Run B (with steering) |
+|--------|--------------------|-----------------------|
+| Tool-Pair TTR | 0.2706 | **0.3132** ▲ |
+| Domain Entropy (normalized) | 0.9199 | **0.9486** ▲ |
+| Mean Overall Score | 4.38 | 4.37 |
+| Pass rate | 100% | 100% |
+
+Steering improves both diversity metrics with negligible quality cost. See [DESIGN.md](DESIGN.md) §9 for full analysis.
+
+---
 
 ## Output Format
 
@@ -148,20 +183,13 @@ Each JSONL line is a conversation record:
     "disambiguation_turns": 1,
     "repair_attempts": 0,
     "steering_enabled": true,
-    "generated_at": "2026-04-09T12:00:00Z",
+    "generated_at": "2026-04-12T22:00:00Z",
     "model": "gpt-4o-mini"
   }
 }
 ```
 
-## Architecture
-
-See [DESIGN.md](DESIGN.md) for full system design documentation including:
-- Component architecture and communication protocol
-- Tool Graph construction and sampling strategy
-- Context management design (within-conversation grounding + cross-conversation steering)
-- Prompt design with iteration history
-- Diversity & quality analysis
+---
 
 ## Project Structure
 
@@ -191,5 +219,8 @@ toolgen/
     writer.py         JSONL writer
 tests/
   unit/               Per-module unit tests
-  integration/        Retry/repair loop integration test
+  integration/        Retry/repair loop + dialogue controls tests
+  e2e/                End-to-end pipeline test (100+ samples, judge threshold)
 ```
+
+See [DESIGN.md](DESIGN.md) for full system design documentation.

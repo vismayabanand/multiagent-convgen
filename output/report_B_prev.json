@@ -1,0 +1,59 @@
+{
+  "total_conversations": 100,
+  "pass_rate": 1.0,
+  "pass_count": 100,
+  "threshold": 3.5,
+  "scores": {
+    "tool_selection": {
+      "mean": 4.43,
+      "std": 0.6237,
+      "min": 3,
+      "max": 5
+    },
+    "naturalness": {
+      "mean": 4.5,
+      "std": 0.5025,
+      "min": 4,
+      "max": 5
+    },
+    "chaining": {
+      "mean": 4.13,
+      "std": 0.9173,
+      "min": 2,
+      "max": 5
+    },
+    "overall": {
+      "mean": 4.354,
+      "std": 0.507,
+      "min": 3.67,
+      "max": 5.0
+    }
+  },
+  "diversity": {
+    "tool_pair_ttr": 0.4317,
+    "domain_entropy_normalized": 0.946,
+    "unique_tool_pairs": 60,
+    "domains_seen": 10,
+    "top_domains": {
+      "Food": 27,
+      "Travel": 17,
+      "Weather": 17,
+      "Maps": 14,
+      "Sports": 11,
+      "Health": 9,
+      "Productivity": 8,
+      "Finance": 7,
+      "Shopping": 7,
+      "News": 5
+    }
+  },
+  "composition": {
+    "mean_turns": 15.92,
+    "mean_tool_calls": 2.97,
+    "repair_distribution": {
+      "0": 76,
+      "1": 18,
+      "2": 6
+    }
+  }
+}
