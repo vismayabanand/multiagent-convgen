@@ -45,17 +45,17 @@ ToolBench JSON
 │                                                      │
 │  ┌──────────┐  ConversationPlan  ┌────────────────┐  │
 │  │ Planner  │──────────────────► │ Dialogue Loop  │  │
-│  │  Agent   │                   │                │   │
-│  └──────────┘                   │  User Agent    │   │
-│                                 │      ↕         │   │
-│                                 │  Assistant     │   │
-│                                 │  Agent         │   │
-│                                 │      │         │   │
-│                                 │  [tool_call]   │   │
-│                                 │      │         │   │
-│                                 │  Execution     │   │
-│                                 │  Session       │   │
-│                                 └────────────────┘   │
+│  │  Agent   │                    │                │  │
+│  └──────────┘                    │  User Agent    │  │
+│                                  │      ↕         │  │
+│                                  │  Assistant     │  │
+│                                  │  Agent         │  │
+│                                  │      │         │  │
+│                                  │  [tool_call]   │  │
+│                                  │      │         │  │
+│                                  │  Execution     │  │
+│                                  │  Session       │  │
+│                                  └────────────────┘  │
 └─────────────────────┬────────────────────────────────┘
                       │ Conversation
                       ▼
