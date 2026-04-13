@@ -31,3 +31,4 @@ env/
 
 # Claude Code
 .claude/
+*.prev.jsonl
