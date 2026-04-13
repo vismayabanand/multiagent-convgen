@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import math
-from collections import Counter
+from collections import Counter, deque
 from pathlib import Path
 from typing import Optional
 
@@ -36,11 +36,16 @@ class CoverageTracker:
         persist_path: Optional[str | Path] = None,
         use_mem0: bool = False,
         mem0_config: Optional[dict] = None,
+        cooldown_k: int = 10,
     ):
         self.tool_use_counts: Counter[str] = Counter()
         self.tool_pair_counts: Counter[tuple[str, str]] = Counter()
         self.domain_counts: Counter[str] = Counter()
         self.pattern_counts: Counter[str] = Counter()
+        # Pair-level cooldown window: the K most recently used (tool_a, tool_b)
+        # pairs are penalised to 0 weight, forcing the sampler to find alternatives.
+        self.cooldown_k = cooldown_k
+        self.pair_cooldown: deque[tuple[str, str]] = deque(maxlen=cooldown_k)
 
         self.persist_path = Path(persist_path) if persist_path else None
         self._mem0_client = None
@@ -61,6 +66,7 @@ class CoverageTracker:
             self.tool_use_counts[tid] += 1
         for pair in zip(tool_ids, tool_ids[1:]):
             self.tool_pair_counts[pair] += 1
+            self.pair_cooldown.append(pair)  # feed cooldown window
         self.domain_counts[domain] += 1
         self.pattern_counts[pattern] += 1
 
@@ -74,6 +80,16 @@ class CoverageTracker:
         """
         count = self.tool_use_counts.get(tool_id, 0)
         return 1.0 / (1.0 + math.log1p(count))
+
+    def pair_weight(self, pair: tuple[str, str]) -> float:
+        """
+        Returns 0.0 if this pair appeared in the last cooldown_k pairs generated,
+        forcing the sampler to find an alternative continuation. Returns 1.0 otherwise.
+
+        This is orthogonal to node-level IDF weights: IDF handles domain balance,
+        the cooldown window handles pair-level repetition. See DESIGN.md §9.3.
+        """
+        return 0.0 if pair in self.pair_cooldown else 1.0
 
     def domain_weight(self, domain: str) -> float:
         count = self.domain_counts.get(domain, 0)

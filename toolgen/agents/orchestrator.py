@@ -402,23 +402,33 @@ class Orchestrator:
             metadata=ctx.metadata.copy(),
         )
 
-        # Inject repair hint into a system-level user message
-        hint_text = "Please complete this task correctly. Issues to fix:\n" + \
-                    "\n".join(f"- {h}" for h in judge_result.repair_hints)
-        repaired_ctx.add_user_message(hint_text)
+        # Repair hints are passed into the assistant's system prompt on the first
+        # call only — they must NOT be added as a user message, which would appear
+        # verbatim in the output JSONL as if a human wrote "Please complete this
+        # task correctly. Issues to fix: ..."
+        repair_hints = judge_result.repair_hints or []
 
         # Let assistant complete from here
-        for _ in range(5):
-            turn = self.assistant_agent.respond(repaired_ctx, chain_tools)
+        for i in range(5):
+            turn = self.assistant_agent.respond(
+                repaired_ctx,
+                chain_tools,
+                repair_hints=repair_hints if i == 0 else None,
+            )
             if turn.tool_calls:
+                # Correct ordering: assistant message (with tool_calls) BEFORE tool outputs.
+                # The assistant agent reconstructs tool_call_ids by pairing assistant
+                # messages with subsequent tool messages in order — reversing them breaks
+                # that pairing and causes "orphaned tool result" errors.
+                tool_call_refs = [
+                    ToolCallRef(tc.endpoint, tc.arguments) for tc in turn.tool_calls
+                ]
+                repaired_ctx.add_assistant_message(turn.content, tool_call_refs)
                 for tc in turn.tool_calls:
                     tool = self._find_tool(tc.endpoint, chain_tools)
                     if tool:
                         response = repaired_ctx.execution_session.execute(tool, tc.arguments)
                         repaired_ctx.add_tool_output(tool.id, response)
-                repaired_ctx.add_assistant_message(turn.content, [
-                    ToolCallRef(tc.endpoint, tc.arguments) for tc in turn.tool_calls
-                ])
             else:
                 repaired_ctx.add_assistant_message(turn.content)
                 if turn.is_final:

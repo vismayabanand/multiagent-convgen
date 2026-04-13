@@ -174,7 +174,7 @@ class ChainSampler:
                 return None  # dead end, retry
 
             weights = [
-                edge.confidence * self._node_weight(nid)
+                edge.confidence * self._node_weight(nid) * self._pair_weight(path[-1], nid)
                 for nid, edge in candidates
             ]
             chosen_id = self._weighted_choice([nid for nid, _ in candidates], weights)
@@ -274,6 +274,16 @@ class ChainSampler:
             return 1.0
         count = self.tracker.tool_use_counts.get(tool_id, 0)
         return 1.0 / (1.0 + math.log1p(count))
+
+    def _pair_weight(self, from_id: str, to_id: str) -> float:
+        """
+        Returns 0.0 if this (from, to) pair is in the cooldown window, else 1.0.
+        When all candidates are cooled off, _weighted_choice falls back to uniform
+        random — preserving reachability in sparse graphs. See DESIGN.md §9.3.
+        """
+        if not self.steering_enabled or self.tracker is None:
+            return 1.0
+        return self.tracker.pair_weight((from_id, to_id))
 
     def _sample_length(self, c: SamplingConstraint) -> int:
         valid_lengths = {

@@ -80,12 +80,22 @@ class AssistantAgent:
         ctx: ConversationContext,
         available_tools: list[Tool],
         tool_result: Optional[dict] = None,
+        repair_hints: Optional[list[str]] = None,
     ) -> AssistantTurn:
-        """Generate an assistant turn using native function calling."""
+        """Generate an assistant turn using native function calling.
+
+        Args:
+            repair_hints: If provided, appended to the system prompt so the
+                assistant knows what to fix. Never injected as a user message
+                (which would corrupt the output JSONL).
+        """
         import datetime
         system = ASSISTANT_SYSTEM_TEMPLATE.format(
             today=datetime.date.today().isoformat()
         )
+        if repair_hints:
+            system += "\n\nIMPORTANT — issues from a prior attempt to fix:\n" + \
+                      "\n".join(f"- {h}" for h in repair_hints)
 
         # Build OpenAI-format tool schemas
         tools_spec = [self._to_openai_tool(t) for t in available_tools]
