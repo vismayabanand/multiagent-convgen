@@ -1,59 +1,60 @@
 {
-  "total_conversations": 100,
+  "total_conversations": 200,
   "pass_rate": 1.0,
-  "pass_count": 100,
+  "pass_count": 200,
   "threshold": 3.5,
   "scores": {
     "tool_selection": {
-      "mean": 4.44,
-      "std": 0.5563,
+      "mean": 4.405,
+      "std": 0.5854,
       "min": 3,
       "max": 5
     },
     "naturalness": {
-      "mean": 4.56,
-      "std": 0.4989,
+      "mean": 4.565,
+      "std": 0.497,
       "min": 4,
       "max": 5
     },
     "chaining": {
-      "mean": 4.18,
-      "std": 0.869,
+      "mean": 4.17,
+      "std": 0.8513,
       "min": 3,
       "max": 5
     },
     "overall": {
-      "mean": 4.3938,
-      "std": 0.5276,
+      "mean": 4.3806,
+      "std": 0.5191,
       "min": 3.67,
       "max": 5.0
     }
   },
   "diversity": {
-    "tool_pair_ttr": 0.4516,
-    "domain_entropy_normalized": 0.9192,
-    "unique_tool_pairs": 70,
+    "tool_pair_ttr": 0.2706,
+    "domain_entropy_normalized": 0.9199,
+    "unique_tool_pairs": 82,
     "domains_seen": 10,
     "top_domains": {
-      "Food": 33,
-      "Travel": 19,
-      "Weather": 18,
-      "Finance": 13,
-      "Health": 9,
-      "Shopping": 8,
-      "Maps": 8,
-      "Sports": 8,
-      "Productivity": 6,
-      "News": 4
+      "Food": 66,
+      "Travel": 37,
+      "Weather": 36,
+      "Finance": 25,
+      "Shopping": 18,
+      "Maps": 18,
+      "Health": 17,
+      "Sports": 16,
+      "Productivity": 12,
+      "News": 7
     }
   },
   "composition": {
-    "mean_turns": 16.79,
-    "mean_tool_calls": 3.16,
+    "mean_turns": 16.64,
+    "mean_tool_calls": 3.06,
     "repair_distribution": {
-      "0": 77,
-      "1": 15,
-      "2": 8
+      "0": 158,
+      "1": 27,
+      "2": 13,
+      "3": 2
     }
   }
 }

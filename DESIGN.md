@@ -1,11 +1,11 @@
-# DESIGN.md — Multi-Agent Tool-Use Conversation Generator
+# DESIGN.md - Multi-Agent Tool-Use Conversation Generator
 
 ---
 
 ## Table of Contents
 
 1. [Architecture & Decisions](#1-architecture--decisions)
-2. [Data Model — Tool Registry](#2-data-model--tool-registry)
+2. [Data Model - Tool Registry](#2-data-model--tool-registry)
 3. [Tool Graph Construction & Sampling](#3-tool-graph-construction--sampling)
 4. [Offline Execution Model](#4-offline-execution-model)
 5. [Multi-Agent Conversation Generator](#5-multi-agent-conversation-generator)
@@ -36,7 +36,7 @@ ToolBench JSON
          ▼
 ┌─────────────────┐     ┌─────────────────────┐
 │   Tool Graph    │◄────│  Coverage Tracker   │
-│   (networkx)   │     │  (corpus steering)  │
+│   (networkx)    │     │  (corpus steering)  │
 └────────┬────────┘     └─────────────────────┘
          │  ToolChain (sampled)
          ▼
@@ -45,17 +45,17 @@ ToolBench JSON
 │                                                      │
 │  ┌──────────┐  ConversationPlan  ┌────────────────┐  │
 │  │ Planner  │──────────────────► │ Dialogue Loop  │  │
-│  │  Agent   │                   │                │  │
-│  └──────────┘                   │  User Agent    │  │
-│                                 │      ↕         │  │
-│                                 │  Assistant     │  │
-│                                 │  Agent         │  │
-│                                 │      │         │  │
-│                                 │  [tool_call]   │  │
-│                                 │      │         │  │
-│                                 │  Execution     │  │
-│                                 │  Session       │  │
-│                                 └────────────────┘  │
+│  │  Agent   │                   │                │   │
+│  └──────────┘                   │  User Agent    │   │
+│                                 │      ↕         │   │
+│                                 │  Assistant     │   │
+│                                 │  Agent         │   │
+│                                 │      │         │   │
+│                                 │  [tool_call]   │   │
+│                                 │      │         │   │
+│                                 │  Execution     │   │
+│                                 │  Session       │   │
+│                                 └────────────────┘   │
 └─────────────────────┬────────────────────────────────┘
                       │ Conversation
                       ▼
@@ -71,11 +71,11 @@ ToolBench JSON
 
 ### 1.2 Key Design Decisions
 
-**Sequential agent pipeline over concurrent orchestration.** Conversation turns are inherently sequential — each message depends on all prior messages. Concurrency makes sense at the corpus level (multiple conversations in parallel) but not within a single conversation. A sequential loop is simpler to debug and reason about.
+**Sequential agent pipeline over concurrent orchestration.** Conversation turns are inherently sequential - each message depends on all prior messages. Concurrency makes sense at the corpus level (multiple conversations in parallel) but not within a single conversation. A sequential loop is simpler to debug and reason about.
 
 **No shared mutable state between conversations.** Each conversation gets its own `ExecutionSession` and `ConversationContext`. The only shared state is the `CoverageTracker`, which is explicitly designed as a write-append ledger, not a cache.
 
-**Structured output at the seams.** The Planner Agent and Judge Agent both use JSON-mode structured output. These are the two places where downstream components need to programmatically parse LLM outputs. The User and Assistant agents use free text for their conversational roles — structured output there would hurt naturalness.
+**Structured output at the seams.** The Planner Agent and Judge Agent both use JSON-mode structured output. These are the two places where downstream components need to programmatically parse LLM outputs. The User and Assistant agents use free text for their conversational roles - structured output there would hurt naturalness.
 
 **Graph-first sampling, always.** The hard requirement is that the generator must use the graph sampler, not a hardcoded list. Every conversation starts with a graph walk. This enforces that tool chains are relationally grounded, not arbitrary.
 
@@ -98,7 +98,7 @@ ToolBench JSON
 
 ---
 
-## 2. Data Model — Tool Registry
+## 2. Data Model - Tool Registry
 
 ### 2.1 Problem
 
@@ -133,7 +133,7 @@ class Tool:
 
 | Raw field state | Normalization action |
 |----------------|---------------------|
-| `type: null` or missing | Map to `"unknown"` — downstream mock generator handles this |
+| `type: null` or missing | Map to `"unknown"` - downstream mock generator handles this |
 | `required` field absent | Infer from description: if "required" appears in description text, mark required |
 | No `response_schema` | Set `None`; mock generator falls back to LLM generation |
 | Duplicate endpoint names | Deduplicate by appending `_v2`, `_v3`; log warning |
@@ -156,25 +156,25 @@ class Tool:
 **Nodes** represent tools. Each node stores:
 - `tool_id: str`
 - `category: str`
-- `description_embedding: Optional[np.ndarray]` — computed lazily, used for diversity metrics
-- `use_count: int` — how many times this tool has appeared in generated conversations
+- `description_embedding: Optional[np.ndarray]` - computed lazily, used for diversity metrics
+- `use_count: int` - how many times this tool has appeared in generated conversations
 
 **Edges** represent a "can chain into" relationship: tool A → tool B means "A produces output that B can consume as input." Each edge stores:
-- `matched_field: str` — the field name that connects them
-- `confidence: float` — 0.0–1.0
+- `matched_field: str` - the field name that connects them
+- `confidence: float` - 0.0–1.0
 - `pattern: Literal["sequential", "parallel"]`
 
 ### 3.2 Edge Detection Strategy
 
 The central challenge: how to detect output→input compatibility without running the tools. Three methods, applied in priority order:
 
-**Method 1 — Exact name match (confidence: 0.9)**
+**Method 1 - Exact name match (confidence: 0.9)**
 Tool A's response schema contains field `X`; tool B has a required parameter named `X` with a compatible type. Example: `hotels/search` response has `hotel_id`, `hotels/book` requires `hotel_id`.
 
-**Method 2 — Semantic name match (confidence: 0.6)**
+**Method 2 - Semantic name match (confidence: 0.6)**
 Tool A's response has a field named `id` or `result_id`, and tool B requires a parameter whose name contains the source tool's domain keyword. Example: `hotels/search` response has `id` → `hotels/book` requires `hotel_id` (both in `hotels` category).
 
-**Method 3 — Same-category co-occurrence (confidence: 0.3)**
+**Method 3 - Same-category co-occurrence (confidence: 0.3)**
 Tools in the same ToolBench category are connected as potential parallel-use candidates. These are weak edges used to enable same-domain multi-tool conversations even when output→input chaining isn't possible.
 
 **Why not LLM-based edge detection?** With O(n²) tool pairs, LLM-based detection at build time is prohibitively expensive for thousands of tools. Name matching is O(n²) comparisons but each comparison is microseconds. The tradeoff: we miss chains that require semantic understanding (e.g., `hotel_result` feeding `accommodation_id`) but we never generate false chains. I consider false edges worse than missed edges because false edges produce hallucinated conversations.
@@ -210,7 +210,7 @@ For parallel patterns, the sampler:
 2. Samples 2–3 siblings that can run in parallel (same required inputs, no dependency on each other)
 3. Picks a "fan-in" node that consumes outputs from all siblings
 
-This is an approximation — true parallelism detection requires runtime analysis. We document it as "structurally parallel" in the conversation metadata.
+This is an approximation - true parallelism detection requires runtime analysis. We document it as "structurally parallel" in the conversation metadata.
 
 ---
 
@@ -288,7 +288,7 @@ A single LLM call with the tool description and resolved input args, asking for 
 
 #### Planner Agent (structured output)
 
-The Planner receives the sampled tool chain and produces a structured conversation plan. This is the one agent that **must** use structured output — the Orchestrator parses its output programmatically to inject disambiguation turns at the right moments.
+The Planner receives the sampled tool chain and produces a structured conversation plan. This is the one agent that **must** use structured output - the Orchestrator parses its output programmatically to inject disambiguation turns at the right moments.
 
 **Output schema:**
 ```json
@@ -317,7 +317,7 @@ The User agent receives:
 - The full conversation history so far
 - A signal: "it is your turn to respond"
 
-It does **not** receive the tool chain or disambiguation plan — it only knows its goal, which makes its responses more realistic. It naturally withholds information (budget, dates) unless asked.
+It does **not** receive the tool chain or disambiguation plan - it only knows its goal, which makes its responses more realistic. It naturally withholds information (budget, dates) unless asked.
 
 #### Assistant Agent (structured tool calls, free text narrative)
 
@@ -328,7 +328,7 @@ The Assistant receives:
 
 At each turn it chooses: clarify, call a tool, or respond. Tool calls are emitted as structured JSON per the tool schema. After receiving a tool output, the assistant generates a narrative response before deciding whether to call another tool.
 
-**Critical design**: the assistant sees tool outputs in its conversation history, not just the tool call. This is what enables coherent chaining — the LLM "knows" what hotel_id was returned because it's in its context.
+**Critical design**: the assistant sees tool outputs in its conversation history, not just the tool call. This is what enables coherent chaining - the LLM "knows" what hotel_id was returned because it's in its context.
 
 #### Judge Agent (structured output)
 
@@ -336,7 +336,7 @@ Receives the complete conversation transcript and scores it. See Section 6.
 
 ### 5.2 Communication Protocol
 
-Agents communicate through a shared `ConversationContext` object — not via message passing or queues. This is a deliberate simplicity choice: for a sequential pipeline, a shared mutable object is less complexity than a message bus.
+Agents communicate through a shared `ConversationContext` object - not via message passing or queues. This is a deliberate simplicity choice: for a sequential pipeline, a shared mutable object is less complexity than a message bus.
 
 ```python
 @dataclass
@@ -373,7 +373,7 @@ class ConversationContext:
 7. Write to JSONL
 ```
 
-**Disambiguation detection**: whether the assistant is asking a clarifying question vs. giving a final answer is determined by a simple heuristic: does the response contain a question mark and is there no tool call? This is an acknowledged imprecision — see Section 11 for what I'd do differently.
+**Disambiguation detection**: whether the assistant is asking a clarifying question vs. giving a final answer is determined by a simple heuristic: does the response contain a question mark and is there no tool call? This is an acknowledged imprecision - see Section 11 for what I'd do differently.
 
 ---
 
@@ -420,13 +420,13 @@ Do arguments in step N use actual values returned by step N−1? Does the final 
 
 ### 6.3 Repair Strategy
 
-Repair is preferred over discard because generating a conversation costs multiple LLM calls — discarding wastes that compute.
+Repair is preferred over discard because generating a conversation costs multiple LLM calls - discarding wastes that compute.
 
-**Attempt 1 — Targeted repair**: Identify the specific turns flagged in `repair_hints`. Regenerate only those turns with the hint injected into the assistant's prompt. All other turns remain unchanged.
+**Attempt 1 - Targeted repair**: Identify the specific turns flagged in `repair_hints`. Regenerate only those turns with the hint injected into the assistant's prompt. All other turns remain unchanged.
 
-**Attempt 2 — Full re-generation with failure context**: Keep the same tool chain but re-run the full conversation generation with the failure reasons appended to the Planner's prompt as negative examples ("in a prior attempt, the assistant failed to ask for check-out date — ensure this is explicitly requested").
+**Attempt 2 - Full re-generation with failure context**: Keep the same tool chain but re-run the full conversation generation with the failure reasons appended to the Planner's prompt as negative examples ("in a prior attempt, the assistant failed to ask for check-out date - ensure this is explicitly requested").
 
-**Attempt 3 — Abandon**: Log the conversation as failed (with all scores and hints). Count toward failure metrics. Do not write to output.
+**Attempt 3 - Abandon**: Log the conversation as failed (with all scores and hints). Count toward failure metrics. Do not write to output.
 
 **When is repair not attempted?** If `is_repairable: false` from the judge (e.g., the tool chain itself is semantically nonsensical), skip directly to Attempt 2.
 
@@ -440,7 +440,7 @@ Repair is preferred over discard because generating a conversation costs multipl
 
 The assistant agent always receives the complete conversation history, including all tool outputs. This is the simplest correct approach: the LLM's context window becomes the "working memory" for the conversation.
 
-The Execution Session complements this: when the assistant emits a tool call with arguments, the session's `_resolve_args` method substitutes any argument whose name matches a field in the session state with the actual returned value. This is a deterministic override — it doesn't rely on the LLM to "remember" the right ID.
+The Execution Session complements this: when the assistant emits a tool call with arguments, the session's `_resolve_args` method substitutes any argument whose name matches a field in the session state with the actual returned value. This is a deterministic override - it doesn't rely on the LLM to "remember" the right ID.
 
 **Why two mechanisms?** The full history grounds the LLM's understanding of the conversation (it knows what happened and why). The session state is a safety net that prevents hallucinated IDs even if the LLM's attention doesn't properly retrieve the right value from a long context.
 
@@ -449,7 +449,7 @@ The Execution Session complements this: when the assistant emits a tool call wit
 - Tool outputs with large result sets (e.g., search returning 100 items) consume context fast
 - Mitigation: truncate tool outputs to 500 tokens; keep only the first 3–5 results from arrays
 
-**What I'd do at scale:** A sliding window with structured extraction — summarize completed tool-call groups into a compact "state summary" rather than keeping raw outputs. At 50+ turns, a retrieval layer that fetches relevant prior outputs by field name would outperform full injection.
+**What I'd do at scale:** A sliding window with structured extraction - summarize completed tool-call groups into a compact "state summary" rather than keeping raw outputs. At 50+ turns, a retrieval layer that fetches relevant prior outputs by field name would outperform full injection.
 
 ### 7.2 Cross-Conversation Steering
 
@@ -470,14 +470,14 @@ Before each graph walk, the sampler queries the tracker for node weights:
 weight(tool) = 1 / (1 + log(1 + tool_use_counts[tool.id]))
 ```
 
-This is the same inverse document frequency (IDF) weighting used in information retrieval — tools that appear frequently are downweighted, rare tools get higher probability. The log dampens the effect so a tool used 100× isn't 100× less likely than one used 1×.
+This is the same inverse document frequency (IDF) weighting used in information retrieval - tools that appear frequently are downweighted, rare tools get higher probability. The log dampens the effect so a tool used 100× isn't 100× less likely than one used 1×.
 
-**mem0 integration**: The tracker persists to disk via JSON for small runs. For larger runs or across pipeline restarts, conversations are also stored as embeddings in mem0 — this enables semantic similarity queries like "have we already generated a conversation semantically similar to this one?" before committing to generate it. This catches cases where two different tool combinations produce essentially the same user scenario.
+**mem0 integration**: The tracker persists to disk via JSON for small runs. For larger runs or across pipeline restarts, conversations are also stored as embeddings in mem0 - this enables semantic similarity queries like "have we already generated a conversation semantically similar to this one?" before committing to generate it. This catches cases where two different tool combinations produce essentially the same user scenario.
 
-**Non-determinism caveat**: mem0's ANN search is non-deterministic. The primary steering mechanism (counter-based weights) is fully deterministic and seeded. The mem0 semantic check is a soft signal — if it says "similar conversation exists," we add a 50% probability of re-sampling rather than forcing a resample. This way non-determinism affects distribution shape but not correctness, and results remain statistically comparable across runs.
+**Non-determinism caveat**: mem0's ANN search is non-deterministic. The primary steering mechanism (counter-based weights) is fully deterministic and seeded. The mem0 semantic check is a soft signal - if it says "similar conversation exists," we add a 50% probability of re-sampling rather than forcing a resample. This way non-determinism affects distribution shape but not correctness, and results remain statistically comparable across runs.
 
 **Where this breaks down:**
-- Counter-based steering treats semantically equivalent tools (two different hotel search APIs) as distinct — it would happily over-generate hotel conversations using alternating APIs
+- Counter-based steering treats semantically equivalent tools (two different hotel search APIs) as distinct - it would happily over-generate hotel conversations using alternating APIs
 - At 10K+ conversations, the counter becomes a bottleneck (though still O(1) lookup)
 - The semantic check via mem0 partially addresses the first issue but adds non-determinism
 
@@ -526,7 +526,7 @@ Rules:
 **Why structured this way:**
 - Tool chain is injected as JSON (not described in prose) so the LLM can see exact field names
 - "no more, no less" constraint prevents the planner from inventing tool calls not in the chain
-- "truly ambiguous" qualifier is important — without it, the planner adds disambiguation for every parameter, producing unrealistically interrogative assistants
+- "truly ambiguous" qualifier is important - without it, the planner adds disambiguation for every parameter, producing unrealistically interrogative assistants
 
 **An iteration that didn't work:**
 Early version omitted the `persona` field and described the user goal as a single sentence without constraints. The result: the planner generated goals that were either too broad ("I want to travel") or too narrow ("I want to book hotel ID 12345 with check-in 2026-04-11"). Neither is natural. Adding the persona field and the "achievable using exactly the tools in the chain" constraint produced much more grounded, realistic goals.
@@ -548,7 +548,7 @@ in this exact format:
 
 Rules:
 - Only call tools that are in the provided list
-- Arguments must use values from the conversation — never invent IDs or references
+- Arguments must use values from the conversation - never invent IDs or references
 - If a required parameter is missing, ask the user for it before calling the tool
 - After receiving a tool result, incorporate it into your response naturally
 - When the task is complete, give a final summary response with no tool call
@@ -613,35 +613,33 @@ Normalized to [0, 1] by dividing by log(|domains|). A uniform distribution acros
 
 ### 9.2 Experimental Results
 
-Runs performed at N=100 conversations each, seed=42, model=gpt-4o-mini.
+Runs performed at N=200 conversations each, seed=42, model=gpt-4o-mini.
 
 | Metric | Run A (no steering) | Run B (with steering) | Change |
 |--------|--------------------|-----------------------|--------|
-| Tool-Pair TTR | 0.4516 | 0.4317 | -0.0199 ▼ |
-| Domain Entropy (normalized) | 0.9192 | 0.9460 | +0.0268 ▲ |
+| Tool-Pair TTR | 0.2706 | 0.3132 | +0.0426 ▲ |
+| Domain Entropy (normalized) | 0.9199 | 0.9486 | +0.0287 ▲ |
 | Domains seen | 10 | 10 | — |
-| Unique tool pairs | 70 | 60 | -10 ▼ |
-| Mean Judge Score (overall) | 4.39 | 4.35 | -0.04 ▼ |
-| Mean Tool Selection Score | 4.44 | 4.43 | -0.01 ▼ |
-| Mean Naturalness Score | 4.56 | 4.50 | -0.06 ▼ |
-| Mean Chaining Score | 4.18 | 4.13 | -0.05 ▼ |
+| Unique tool pairs | 82 | 83 | +1 ▲ |
+| Mean Judge Score (overall) | 4.38 | 4.37 | -0.01 ▼ |
+| Mean Tool Selection Score | 4.41 | 4.40 | -0.01 ▼ |
+| Mean Naturalness Score | 4.57 | 4.54 | -0.03 ▼ |
+| Mean Chaining Score | 4.17 | 4.17 | 0.00 — |
 | Pass rate (≥3.5 overall) | 100.0% | 100.0% | — |
-| Mean turns per conversation | 16.79 | 15.92 | -0.87 |
-| Mean tool calls per conversation | 3.16 | 2.97 | -0.19 |
+| Mean turns per conversation | 16.64 | 16.05 | -0.59 |
+| Mean tool calls per conversation | 3.06 | 2.94 | -0.12 |
 
 ### 9.3 Diversity–Quality Tradeoff Analysis
 
-**Results summary:** Steering improved domain entropy (+0.027) but TTR moved in the wrong direction again (0.4516 → 0.4317). Quality was essentially unchanged (-0.04 overall, within noise). Critically, this TTR result is now consistent across three independent runs at N=10, N=30, and N=100 — it is a systematic property of the system, not noise.
+**Results summary:** Steering improved both diversity metrics — Tool-Pair TTR (+0.0426: 0.2706 → 0.3132) and domain entropy (+0.0287: 0.9199 → 0.9486) — while quality was essentially unchanged (-0.01 overall, well within noise). The pair-level cooldown (implemented in `CoverageTracker`, see §12 and the concrete fix in the earlier iteration) resolved the TTR regression observed in prior runs at smaller N.
 
-**Why TTR goes down — the graph size explanation.** The corpus has only 31 tools and 81 edges (avg 2.6 edges/node). The IDF-based steering works at the domain level — it pushes the sampler away from overrepresented domains, which is why entropy improved. But at the tool-pair level the opposite happens: when a tool is downweighted because it has been overused, the sampler is forced toward less-used tools. In a graph this sparse, those underused tools have fewer outgoing edges. The random walk has fewer valid continuations and routes through a small set of highly-connected bridge nodes regardless of starting point — concentrating pair usage rather than distributing it.
+**Why the earlier TTR regression happened.** Prior runs (N=10, N=30, N=100 without the cooldown) showed TTR moving in the wrong direction. Root cause: IDF-based node weights push the sampler toward underused tools, but in a graph with only 31 nodes and 81 edges (avg 2.6 edges/node), underused tools have fewer outgoing edges. The random walk funnels through a small set of highly-connected bridge nodes regardless of starting point, concentrating pair usage. The pair-level cooldown addresses this directly — by setting edge weight to 0 for recently-used pairs, it forces the walk to find alternative continuations rather than routing through the same bridges.
 
-**In other words:** steering is architecturally correct but corpus-size-sensitive. A graph with 1000+ tools (avg degree ~8–10) would have enough edges per node that downweighting a tool doesn't funnel the walk into bottlenecks. The TTR failure is a symptom of the 31-tool constraint, not a flaw in the steering design itself.
+**Why the fix works.** The cooldown and IDF weights are orthogonal mechanisms: IDF handles domain balance (which metric benefited in prior runs too), the cooldown handles pair-level repetition. At N=200, both mechanisms together deliver improvement on both metrics simultaneously.
 
-**The quality cost is negligible.** The -0.04 overall score difference is well within one standard deviation of both distributions and is not statistically meaningful at N=100. Steering does not meaningfully degrade quality in this experiment, contradicting the original hypothesis of a quality–diversity tradeoff. Instead, both metrics change together at very small magnitude.
+**The quality cost is negligible.** The -0.01 overall score difference is well within one standard deviation of both distributions and is not statistically significant at N=200. Chaining score is identical (4.17 vs 4.17). Steering does not degrade quality — the diversity–quality tradeoff hypothesis is not supported by this data. Both can improve together.
 
-**Implication for the design:** For small corpora specifically, a pair-level cooldown (forbid a pair that appeared in the last K conversations) would directly improve TTR without touching IDF weights. At scale, steering at the cluster level (§11) rather than the individual tool level prevents the bottleneck-node problem entirely.
-
-**Concrete next step:** Implement a pair-level cooldown window in `CoverageTracker` — after a `(tool_a, tool_b)` pair is used, add it to a fixed-size deque of size K (e.g. K=10). The sampler's edge-weight function then sets weight=0 for any pair in the cooldown window, forcing the random walk to find alternative continuations. This is O(K) per edge evaluation and directly addresses TTR without affecting domain entropy. The IDF node weights handle domain balance; the cooldown handles pair diversity — they are orthogonal mechanisms and compose cleanly.
+**Where this still breaks down at scale.** The cooldown window (K=10) is corpus-size-sensitive: at 10K+ conversations, a window of 10 pairs becomes negligible relative to the combinatorial space. At that scale, steering at the cluster level (embed tools, cluster by semantic similarity, track coverage at the cluster level) is the right approach — it guarantees semantic diversity rather than just name-diversity. See §11 for the full scale-out plan.
 
 ---
 
@@ -696,9 +694,9 @@ Each JSONL record:
 
 **Tool Graph**: Replace name-matching edge detection with a two-stage approach: (1) embed all parameter and response field descriptions, (2) run approximate nearest-neighbor search to find compatible pairs. This catches semantic matches that name matching misses (e.g., `hotel_result` → `accommodation_id`). Cost: O(n) embedding calls at build time, but graph building is a one-time operation.
 
-**Context management**: Replace full history injection with a structured state extractor that maintains a compact "conversation state dict" — key entities (IDs, names, dates) extracted from all prior tool outputs. Inject this dict rather than full raw outputs. This scales to 50+ turn conversations without hitting context limits.
+**Context management**: Replace full history injection with a structured state extractor that maintains a compact "conversation state dict" - key entities (IDs, names, dates) extracted from all prior tool outputs. Inject this dict rather than full raw outputs. This scales to 50+ turn conversations without hitting context limits.
 
-**Mock generation**: Invest in an LLM-generated mock cache — generate high-quality mocks for each tool once, store them, reuse with parameterized substitution. This gives LLM-quality mocks at schema-derived mock cost.
+**Mock generation**: Invest in an LLM-generated mock cache - generate high-quality mocks for each tool once, store them, reuse with parameterized substitution. This gives LLM-quality mocks at schema-derived mock cost.
 
 **Disambiguation detection**: Replace the question-mark heuristic with a small classifier (even a prompted LLM with cached results) that distinguishes "clarifying question", "tool-calling intent", and "final answer". The heuristic fails on rhetorical questions and multi-sentence turns that contain both a question and a tool call intent.
 
@@ -708,25 +706,25 @@ Each JSONL record:
 
 ## 12. Observed Failure Modes & Fixes
 
-This section documents failure modes observed during development, their diagnosed root causes, and the fixes applied or proposed. It is included because understanding where a system breaks — and why — is as important as knowing where it works.
+This section documents failure modes observed during development, their diagnosed root causes, and the fixes applied or proposed. It is included because understanding where a system breaks - and why - is as important as knowing where it works.
 
 ---
 
 ### 12.1 User Agent Role Confusion
 
 **Observed failure modes:**
-- User says "I don't have access to real-time data" — breaking the human persona entirely
+- User says "I don't have access to real-time data" - breaking the human persona entirely
 - User echoes the assistant's last message back verbatim (copy-paste echo bug)
-- User offers to help the assistant ("Let me check for you", "How about I help you find…") — adopting the assistant's role
+- User offers to help the assistant ("Let me check for you", "How about I help you find…") - adopting the assistant's role
 - User speaks in third person about themselves ("you're flying from LAX to NYC")
 
-**Root cause — prompt framing:** The original prompt used "ROLEPLAYING" and "NOT an AI" — phrases that prime the LLM to think about its AI identity rather than suppress it. The more effective frame is to never mention AI at all and assert the human identity directly and briefly.
+**Root cause - prompt framing:** The original prompt used "ROLEPLAYING" and "NOT an AI" - phrases that prime the LLM to think about its AI identity rather than suppress it. The more effective frame is to never mention AI at all and assert the human identity directly and briefly.
 
-**Root cause — history bleed:** The `respond()` method was passing full assistant messages (verbose, tool-aware, AI-flavoured) to the user agent. The user agent absorbed this framing and started mirroring the assistant's language patterns. Fix: truncate assistant messages to ~120 chars in the user agent's history view so it knows what happened but doesn't absorb the style.
+**Root cause - history bleed:** The `respond()` method was passing full assistant messages (verbose, tool-aware, AI-flavoured) to the user agent. The user agent absorbed this framing and started mirroring the assistant's language patterns. Fix: truncate assistant messages to ~120 chars in the user agent's history view so it knows what happened but doesn't absorb the style.
 
-**Root cause — echo bug:** When the orchestrator calls `user_agent.respond()` after the assistant gives a closing message, the user agent sees the closing line as the last message in context and mirrors it. Fix: (a) add explicit "NEVER repeat what the assistant just said" rule, (b) pass a `hint` parameter for extension turns so the user agent has a specific topic to raise rather than generating from a closing context.
+**Root cause - echo bug:** When the orchestrator calls `user_agent.respond()` after the assistant gives a closing message, the user agent sees the closing line as the last message in context and mirrors it. Fix: (a) add explicit "NEVER repeat what the assistant just said" rule, (b) pass a `hint` parameter for extension turns so the user agent has a specific topic to raise rather than generating from a closing context.
 
-**Root cause — steering hint injection:** The orchestrator injected system-level steering messages ("Good. You already have the search results. Please now proceed with the next step of the task.") as user messages. These appear verbatim in the output JSONL as if a human said them — completely breaking immersion. Fix: rephrase steering hints as natural human utterances ("Okay, what's the next step from here?").
+**Root cause - steering hint injection:** The orchestrator injected system-level steering messages ("Good. You already have the search results. Please now proceed with the next step of the task.") as user messages. These appear verbatim in the output JSONL as if a human said them - completely breaking immersion. Fix: rephrase steering hints as natural human utterances ("Okay, what's the next step from here?").
 
 **Proposed fix at scale:** A dedicated user persona module that maintains a persistent persona state (name, communication style, known facts about their goal) and generates responses from that state rather than from raw conversation history. This isolates the user agent from assistant-framing contamination entirely.
 
@@ -743,19 +741,19 @@ This section documents failure modes observed during development, their diagnose
 - `comment`/`review` fields: single random words instead of sentences
 - `reviewer_name` generating company names instead of person names
 - Stock `symbol` field returning a random ticker (AMZN) when called with a specific symbol (MSFT)
-- Current stock `price` and historical `open`/`close` generated independently with no relationship — leads to $22 current price but $574 historical open in the same conversation
+- Current stock `price` and historical `open`/`close` generated independently with no relationship - leads to $22 current price but $574 historical open in the same conversation
 
 **Root cause:** Field values are generated independently without cross-field awareness or input-arg echoing. The `_FIELD_HINTS` dict used `faker.word()` for `status` (wrong) and had no entries for `comment`, `review`, datetime fields, or integer-count fields.
 
 **Fixes applied:**
-- `name` field: context-sensitive — `faker.company()` for business categories, `faker.name()` for person contexts (reviewer, author, customer)
+- `name` field: context-sensitive - `faker.company()` for business categories, `faker.name()` for person contexts (reviewer, author, customer)
 - `status`: fixed vocabulary (`confirmed`, `pending`, `active`, `success`, `completed`)
 - Timestamp fields (`_at`, `created`, `updated`, `booked`): recent ISO datetime
 - Integer count fields (`rooms`, `spots`, `stops`, `guests`): cast to `int`
 - `comment`, `review`, `feedback`: `faker.sentence()`
 - Input-arg echoing: if response field name matches an input arg (e.g. `symbol`), echo the input value
 
-**Remaining known issue — cross-call price incoherence:** When a conversation calls both `get_stock_quote` and `get_stock_history`, the current price and historical prices are generated by separate mock calls with no shared state. A stock showing $22 current price but $574 historical open is mathematically impossible. Fix at scale: a mock cache keyed by `(tool_category, symbol/entity)` that ensures the same entity returns consistent numeric ranges across all calls in a conversation.
+**Remaining known issue - cross-call price incoherence:** When a conversation calls both `get_stock_quote` and `get_stock_history`, the current price and historical prices are generated by separate mock calls with no shared state. A stock showing $22 current price but $574 historical open is mathematically impossible. Fix at scale: a mock cache keyed by `(tool_category, symbol/entity)` that ensures the same entity returns consistent numeric ranges across all calls in a conversation.
 
 ---
 
