@@ -1,4 +1,4 @@
-# toolgen — Multi-Agent Tool-Use Conversation Generator
+# Toolgen: Multi-Agent Tool-Use Conversation Generator
 
 Generates synthetic multi-turn conversations with multi-step tool-use traces, grounded in ToolBench tool schemas. Suitable for training and evaluating tool-use agents.
 
@@ -34,7 +34,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 The pre-built artifacts (`registry.pkl`, `graph.pkl`) are already committed to the repo under `artifacts/`. You do **not** need to run `toolgen build` unless you want to rebuild from raw ToolBench data.
 
-### Step 1 — Generate conversations
+### Step 1: Generate conversations
 
 ```bash
 # Run B: cross-conversation steering enabled (primary run)
@@ -55,14 +55,14 @@ toolgen generate \
 
 Pre-generated datasets (`output/run_A.jsonl`, `output/run_B.jsonl`) are also already in the repo if you want to skip generation.
 
-### Step 2 — Evaluate
+### Step 2: Evaluate
 
 ```bash
 toolgen evaluate --dataset ./output/run_B.jsonl --output ./output/report_B.json
 toolgen evaluate --dataset ./output/run_A.jsonl --output ./output/report_A.json
 ```
 
-### Step 3 — Run tests
+### Step 3: Run tests
 
 ```bash
 # Unit + integration tests (no API key needed)
