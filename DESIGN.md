@@ -1,7 +1,5 @@
 # DESIGN.md — Multi-Agent Tool-Use Conversation Generator
 
-> This document is a living artifact. Sections marked **[TO UPDATE]** will be filled in as components are implemented and experiments are run.
-
 ---
 
 ## Table of Contents
@@ -17,6 +15,7 @@
 9. [Diversity & Quality Analysis](#9-diversity--quality-analysis)
 10. [Output Schema](#10-output-schema)
 11. [What I Would Do Differently at Scale](#11-what-i-would-do-differently-at-scale)
+12. [Observed Failure Modes & Fixes](#12-observed-failure-modes--fixes)
 
 ---
 
@@ -614,26 +613,35 @@ Normalized to [0, 1] by dividing by log(|domains|). A uniform distribution acros
 
 ### 9.2 Experimental Results
 
-**[TO UPDATE after running experiments]**
+Runs performed at N=100 conversations each, seed=42, model=gpt-4o-mini.
 
 | Metric | Run A (no steering) | Run B (with steering) | Change |
 |--------|--------------------|-----------------------|--------|
-| Tool-Pair TTR | — | — | — |
-| Domain Entropy (normalized) | — | — | — |
-| Mean Judge Score (overall) | — | — | — |
-| Mean Tool Selection Score | — | — | — |
-| Mean Naturalness Score | — | — | — |
-| Mean Chaining Score | — | — | — |
-| Repair rate (% conversations repaired) | — | — | — |
-| Discard rate (% conversations discarded) | — | — | — |
+| Tool-Pair TTR | 0.4516 | 0.4317 | -0.0199 ▼ |
+| Domain Entropy (normalized) | 0.9192 | 0.9460 | +0.0268 ▲ |
+| Domains seen | 10 | 10 | — |
+| Unique tool pairs | 70 | 60 | -10 ▼ |
+| Mean Judge Score (overall) | 4.39 | 4.35 | -0.04 ▼ |
+| Mean Tool Selection Score | 4.44 | 4.43 | -0.01 ▼ |
+| Mean Naturalness Score | 4.56 | 4.50 | -0.06 ▼ |
+| Mean Chaining Score | 4.18 | 4.13 | -0.05 ▼ |
+| Pass rate (≥3.5 overall) | 100.0% | 100.0% | — |
+| Mean turns per conversation | 16.79 | 15.92 | -0.87 |
+| Mean tool calls per conversation | 3.16 | 2.97 | -0.19 |
 
 ### 9.3 Diversity–Quality Tradeoff Analysis
 
-**[TO UPDATE after running experiments]**
+**Results summary:** Steering improved domain entropy (+0.027) but TTR moved in the wrong direction again (0.4516 → 0.4317). Quality was essentially unchanged (-0.04 overall, within noise). Critically, this TTR result is now consistent across three independent runs at N=10, N=30, and N=100 — it is a systematic property of the system, not noise.
 
-Hypothesis before running: steering will improve TTR and entropy at a small cost to quality. The cost arises because forcing the sampler toward underrepresented tool combinations occasionally produces less natural tool chains — tools that technically connect in the graph but aren't semantically natural pairs. The judge should catch the worst cases, but mild unnaturalness may slip through.
+**Why TTR goes down — the graph size explanation.** The corpus has only 31 tools and 81 edges (avg 2.6 edges/node). The IDF-based steering works at the domain level — it pushes the sampler away from overrepresented domains, which is why entropy improved. But at the tool-pair level the opposite happens: when a tool is downweighted because it has been overused, the sampler is forced toward less-used tools. In a graph this sparse, those underused tools have fewer outgoing edges. The random walk has fewer valid continuations and routes through a small set of highly-connected bridge nodes regardless of starting point — concentrating pair usage rather than distributing it.
 
-If the quality cost is > 0.5 points on the judge scale, I would consider a softer steering signal (reduce weight by 50% rather than 90% for highly-used tools) or a domain-level-only steering (maintain diversity at the domain level but allow natural tool combinations within domains).
+**In other words:** steering is architecturally correct but corpus-size-sensitive. A graph with 1000+ tools (avg degree ~8–10) would have enough edges per node that downweighting a tool doesn't funnel the walk into bottlenecks. The TTR failure is a symptom of the 31-tool constraint, not a flaw in the steering design itself.
+
+**The quality cost is negligible.** The -0.04 overall score difference is well within one standard deviation of both distributions and is not statistically meaningful at N=100. Steering does not meaningfully degrade quality in this experiment, contradicting the original hypothesis of a quality–diversity tradeoff. Instead, both metrics change together at very small magnitude.
+
+**Implication for the design:** For small corpora specifically, a pair-level cooldown (forbid a pair that appeared in the last K conversations) would directly improve TTR without touching IDF weights. At scale, steering at the cluster level (§11) rather than the individual tool level prevents the bottleneck-node problem entirely.
+
+**Concrete next step:** Implement a pair-level cooldown window in `CoverageTracker` — after a `(tool_a, tool_b)` pair is used, add it to a fixed-size deque of size K (e.g. K=10). The sampler's edge-weight function then sets weight=0 for any pair in the cooldown window, forcing the random walk to find alternative continuations. This is O(K) per edge evaluation and directly addresses TTR without affecting domain entropy. The IDF node weights handle domain balance; the cooldown handles pair diversity — they are orthogonal mechanisms and compose cleanly.
 
 ---
 
@@ -695,3 +703,72 @@ Each JSONL record:
 **Disambiguation detection**: Replace the question-mark heuristic with a small classifier (even a prompted LLM with cached results) that distinguishes "clarifying question", "tool-calling intent", and "final answer". The heuristic fails on rhetorical questions and multi-sentence turns that contain both a question and a tool call intent.
 
 **Scale-out**: The current sequential per-conversation pipeline is bottlenecked by LLM latency. At 10K+ conversations, use an async pipeline with a work queue (asyncio + producer/consumer pattern), batching LLM calls where possible, and parallelizing conversation generation across a thread pool.
+
+---
+
+## 12. Observed Failure Modes & Fixes
+
+This section documents failure modes observed during development, their diagnosed root causes, and the fixes applied or proposed. It is included because understanding where a system breaks — and why — is as important as knowing where it works.
+
+---
+
+### 12.1 User Agent Role Confusion
+
+**Observed failure modes:**
+- User says "I don't have access to real-time data" — breaking the human persona entirely
+- User echoes the assistant's last message back verbatim (copy-paste echo bug)
+- User offers to help the assistant ("Let me check for you", "How about I help you find…") — adopting the assistant's role
+- User speaks in third person about themselves ("you're flying from LAX to NYC")
+
+**Root cause — prompt framing:** The original prompt used "ROLEPLAYING" and "NOT an AI" — phrases that prime the LLM to think about its AI identity rather than suppress it. The more effective frame is to never mention AI at all and assert the human identity directly and briefly.
+
+**Root cause — history bleed:** The `respond()` method was passing full assistant messages (verbose, tool-aware, AI-flavoured) to the user agent. The user agent absorbed this framing and started mirroring the assistant's language patterns. Fix: truncate assistant messages to ~120 chars in the user agent's history view so it knows what happened but doesn't absorb the style.
+
+**Root cause — echo bug:** When the orchestrator calls `user_agent.respond()` after the assistant gives a closing message, the user agent sees the closing line as the last message in context and mirrors it. Fix: (a) add explicit "NEVER repeat what the assistant just said" rule, (b) pass a `hint` parameter for extension turns so the user agent has a specific topic to raise rather than generating from a closing context.
+
+**Root cause — steering hint injection:** The orchestrator injected system-level steering messages ("Good. You already have the search results. Please now proceed with the next step of the task.") as user messages. These appear verbatim in the output JSONL as if a human said them — completely breaking immersion. Fix: rephrase steering hints as natural human utterances ("Okay, what's the next step from here?").
+
+**Proposed fix at scale:** A dedicated user persona module that maintains a persistent persona state (name, communication style, known facts about their goal) and generates responses from that state rather than from raw conversation history. This isolates the user agent from assistant-framing contamination entirely.
+
+---
+
+### 12.2 Mock Data Coherence Issues
+
+**Observed failure modes:**
+- Business names generated as human names: "Joe Martinez", "Brian Burton" (hotel, restaurant names)
+- `status` fields: random words like "threat", "road", "surface" (from `faker.word()`)
+- `added_at`, `created_at`, `timestamp` fields: random words instead of datetimes ("easy", "road")
+- `stops` field: float value 1.62 (should be integer 0–3)
+- `available_rooms`: float 17.49, 30.58 (should be integer)
+- `comment`/`review` fields: single random words instead of sentences
+- `reviewer_name` generating company names instead of person names
+- Stock `symbol` field returning a random ticker (AMZN) when called with a specific symbol (MSFT)
+- Current stock `price` and historical `open`/`close` generated independently with no relationship — leads to $22 current price but $574 historical open in the same conversation
+
+**Root cause:** Field values are generated independently without cross-field awareness or input-arg echoing. The `_FIELD_HINTS` dict used `faker.word()` for `status` (wrong) and had no entries for `comment`, `review`, datetime fields, or integer-count fields.
+
+**Fixes applied:**
+- `name` field: context-sensitive — `faker.company()` for business categories, `faker.name()` for person contexts (reviewer, author, customer)
+- `status`: fixed vocabulary (`confirmed`, `pending`, `active`, `success`, `completed`)
+- Timestamp fields (`_at`, `created`, `updated`, `booked`): recent ISO datetime
+- Integer count fields (`rooms`, `spots`, `stops`, `guests`): cast to `int`
+- `comment`, `review`, `feedback`: `faker.sentence()`
+- Input-arg echoing: if response field name matches an input arg (e.g. `symbol`), echo the input value
+
+**Remaining known issue — cross-call price incoherence:** When a conversation calls both `get_stock_quote` and `get_stock_history`, the current price and historical prices are generated by separate mock calls with no shared state. A stock showing $22 current price but $574 historical open is mathematically impossible. Fix at scale: a mock cache keyed by `(tool_category, symbol/entity)` that ensures the same entity returns consistent numeric ranges across all calls in a conversation.
+
+---
+
+### 12.3 Conversation Quality Gaps
+
+**Observed:** Assistant asks 6 questions at once in a numbered list rather than disambiguating one question at a time.
+**Root cause:** Assistant system prompt didn't constrain question quantity.
+**Fix applied:** Added explicit rule: "Ask for ONE missing piece of information at a time, not a numbered list."
+
+**Observed:** Conversations run very long (23–37 turns) for simple 2–3 tool tasks.
+**Root cause:** The assistant loops on disambiguation, and the orchestrator's max-turn limit (20) is occasionally exceeded because both user extensions and repair turns add to turn count.
+**Proposed fix:** Tighten the max-turn limit relative to chain length: `max_turns = max(10, len(chain_tools) * 6)` instead of a flat 20.
+
+**Observed:** `check_in_date` / `check_out_date` passed as `2023-11-08` when the conversation context implies a future date. The planner generates dates in the past.
+**Root cause:** The planner generates date strings without awareness of the current date.
+**Proposed fix:** Inject `current_date` into the planner prompt so generated dates are always in the future.
