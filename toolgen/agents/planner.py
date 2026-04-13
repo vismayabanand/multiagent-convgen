@@ -7,6 +7,7 @@ structured output" requirement). See DESIGN.md §5.1 and §8.1.
 
 from __future__ import annotations
 
+import datetime
 import json
 import logging
 from dataclasses import dataclass, field
@@ -50,9 +51,13 @@ Produce a JSON plan with exactly these fields:
   "conversation_type": "<sequential | parallel | mixed>"
 }}
 
+Today's date: {today}
+
 Rules:
 - user_goal must be something a real person would ask (not API jargon)
-- disambiguation_points should only cover truly required parameters not inferrable from the goal
+- Any dates in the scenario (travel dates, booking dates, deadlines) must be AFTER today's date
+- disambiguation_points should only cover parameters a real user would naturally know (budget, destination, dates, preferences)
+- NEVER create a disambiguation point for IDs (hotel_id, flight_id, booking_ref, user_id, etc.) — these come from tool outputs, not from users
 - Keep disambiguation_points to 0-2 items (don't interrogate the user)
 - estimated_turns = 2 * (tool_steps + len(disambiguation_points)) approximately\
 """
@@ -120,6 +125,7 @@ class PlannerAgent:
         user_content = PLANNER_USER_TEMPLATE.format(
             tool_chain_json=tool_chain_json,
             tool_descriptions=tool_descriptions,
+            today=datetime.date.today().isoformat(),
         )
 
         # Inject repair context if this is a retry

@@ -10,6 +10,7 @@ See DESIGN.md §5.3 for the full loop design.
 from __future__ import annotations
 
 import logging
+import random
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -70,6 +71,7 @@ class Orchestrator:
         self.mock_generator = mock_generator
         self.seed = seed
         self.model_name = model_name
+        self._rng = random.Random(seed)
 
     def generate(
         self,
@@ -187,11 +189,16 @@ class Orchestrator:
         consecutive_assistant_turns = 0
         tool_call_counts: dict[str, int] = {}  # endpoint → total call count this conversation
         pending_steer_hint: str | None = None  # injected before next assistant turn
+        user_extensions = 0  # how many times we've kept conversation alive via user follow-up
+        max_user_extensions = max(0, len(chain_tools) - 1)
 
         for turn in range(MAX_TURNS_PER_CONVERSATION):
-            # Inject steering hint if the assistant has been looping on one tool
+            # Inject steering hint if the assistant has been looping on one tool.
+            # Only inject when the last message is NOT already from the user —
+            # otherwise we'd create two consecutive user messages.
             if pending_steer_hint:
-                ctx.add_user_message(pending_steer_hint)
+                if not ctx.messages or ctx.messages[-1].role != "user":
+                    ctx.add_user_message(pending_steer_hint)
                 pending_steer_hint = None
 
             # Check if we should trigger disambiguation before this tool
@@ -204,11 +211,11 @@ class Orchestrator:
             # Handle tool calls
             if assistant_turn.tool_calls:
                 consecutive_assistant_turns = 0
-                tool_call_refs = []
                 steer_after = False
 
                 # Cap per-turn calls and deduplicate (same endpoint+args)
                 seen_in_turn: set[str] = set()
+                calls_to_run: list[tuple] = []   # (tc, tool) pairs to execute
                 for tc in assistant_turn.tool_calls[:MAX_TOOL_CALLS_PER_TURN]:
                     dedup_key = f"{tc.endpoint}|{sorted(tc.arguments.items())}"
                     if dedup_key in seen_in_turn:
@@ -226,46 +233,99 @@ class Orchestrator:
                         steer_after = True
                         continue  # skip executing the redundant call
 
-                    # Execute via session (grounds args, generates mock)
-                    response = ctx.execution_session.execute(tool, tc.arguments)
-                    tool_call_refs.append(ToolCallRef(tc.endpoint, tc.arguments))
-                    ctx.add_tool_output(tool.id, response)
-                    tool_index = min(tool_index + 1, len(chain_tools) - 1)
+                    calls_to_run.append((tc, tool))
 
-                if steer_after:
-                    # Build a hint toward the next uncalled tool in the chain
-                    uncalled = [
-                        t for t in chain_tools
-                        if tool_call_counts.get(t.id, 0) == 0
-                    ]
-                    if uncalled:
-                        pending_steer_hint = (
-                            f"Good. You already have the search results. "
-                            f"Please now proceed with the next step of the task."
-                        )
-                    else:
-                        pending_steer_hint = (
-                            "You have all the information you need. "
-                            "Please give the user a final summary and complete the task."
-                        )
+                # If ALL calls were filtered out (all redundant), don't add an empty
+                # assistant message — fall through to handle as a non-tool turn instead.
+                # This prevents the cascade where skipped calls keep triggering steer hints.
+                if not calls_to_run and not assistant_turn.content:
+                    if steer_after:
+                        # Force a natural wrap-up instead of looping
+                        pending_steer_hint = self._rng.choice([
+                            "Great, can you give me a quick summary of everything?",
+                            "Perfect, that's all I needed — thanks!",
+                            "Awesome, can you wrap it up for me?",
+                        ])
+                        steer_after = False
+                    consecutive_assistant_turns += 1
+                    if consecutive_assistant_turns >= 3:
+                        return True
+                    continue
 
-                # Add assistant message with tool call references
+                # *** Correct ordering: assistant message (with tool_calls) BEFORE tool outputs ***
+                tool_call_refs = [ToolCallRef(tc.endpoint, tc.arguments) for tc, _ in calls_to_run]
                 ctx.add_assistant_message(
                     content=assistant_turn.content,
                     tool_calls=tool_call_refs,
                 )
+
+                # Now execute each tool and append its output
+                for tc, tool in calls_to_run:
+                    response = ctx.execution_session.execute(tool, tc.arguments)
+                    ctx.add_tool_output(tool.id, response)
+                    tool_index = min(tool_index + 1, len(chain_tools) - 1)
+
+                if steer_after:
+                    uncalled = [
+                        t for t in chain_tools
+                        if tool_call_counts.get(t.id, 0) == 0
+                    ]
+                    # Steer hints must sound like something a real user would say —
+                    # they appear verbatim in the output JSONL as user messages.
+                    if uncalled:
+                        pending_steer_hint = self._rng.choice([
+                            "Okay, what's the next step from here?",
+                            "Got it, what do we do next?",
+                            "Alright, where do we go from here?",
+                        ])
+                    else:
+                        pending_steer_hint = self._rng.choice([
+                            "Great, can you give me a quick summary of everything?",
+                            "Perfect, that's all I needed — thanks!",
+                            "Awesome, can you wrap it up for me?",
+                        ])
+
                 continue  # assistant will respond to tool outputs next turn
 
-            # No tool call
+            # No tool call — if the assistant returned nothing at all, treat as stuck
+            if not assistant_turn.content and not assistant_turn.tool_calls:
+                logger.debug(f"[{ctx.conversation_id}] Empty assistant turn, forcing completion")
+                return True
+
             ctx.add_assistant_message(content=assistant_turn.content)
 
             if assistant_turn.is_final:
+                # If significant chain tools are uncalled, let the user naturally extend
+                called_ids = set(ctx.tools_used)
+                uncalled = [t for t in chain_tools if t.id not in called_ids]
+                enough_room = turn < MAX_TURNS_PER_CONVERSATION - 3
+                if uncalled and user_extensions < max_user_extensions and enough_room:
+                    next_topic = uncalled[0].description[:60] if uncalled else None
+                    hint = (
+                        f"The task isn't fully done yet. Naturally bring up: {next_topic}"
+                        if next_topic else None
+                    )
+                    user_extension = self.user_agent.respond(plan, ctx, hint=hint)
+                    # Stop extending if the user is clearly wrapping up
+                    if self._user_is_done(user_extension):
+                        ctx.add_user_message(user_extension)
+                        logger.debug(f"[{ctx.conversation_id}] User signalled done, ending")
+                        return True
+                    if user_extension.strip():
+                        ctx.add_user_message(user_extension)
+                        consecutive_assistant_turns = 0
+                        user_extensions += 1
+                        continue
                 logger.debug(f"[{ctx.conversation_id}] Conversation complete at turn {turn}")
                 return True
 
             if assistant_turn.is_clarification:
                 # User responds to the question
                 user_response = self.user_agent.respond(plan, ctx)
+                # If user says bye in response to a clarification, end cleanly
+                if self._user_is_done(user_response):
+                    ctx.add_user_message(user_response)
+                    return True
                 ctx.add_user_message(user_response)
                 consecutive_assistant_turns = 0
                 continue
@@ -277,6 +337,16 @@ class Orchestrator:
 
         logger.warning(f"[{ctx.conversation_id}] Hit max turns limit")
         return True  # Return True — we have *something*, let the judge decide
+
+    _DONE_PHRASES = (
+        "bye", "goodbye", "thanks, bye", "that's all", "all done",
+        "that's everything", "no more", "all good", "i'm good", "im good",
+    )
+
+    def _user_is_done(self, msg: str) -> bool:
+        """Return True if the user message signals the conversation is over."""
+        lower = msg.lower().strip()
+        return any(phrase in lower for phrase in self._DONE_PHRASES)
 
     def _maybe_inject_disambiguation(
         self,

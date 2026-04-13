@@ -7,7 +7,7 @@ Generates synthetic multi-turn conversations with multi-step tool-use traces, gr
 ### Prerequisites
 
 - Python 3.10+
-- An OpenAI API key (or compatible endpoint)
+- An API key for one of: Groq (free tier), OpenAI, or Anthropic
 
 ### Install
 
@@ -16,9 +16,12 @@ cd /path/to/repo
 pip install -e ".[dev]"
 ```
 
-Create a `.env` file:
-```
-OPENAI_API_KEY=sk-...
+Create a `.env` file with **any one** of these keys (auto-detected in priority order):
+
+```bash
+GROQ_API_KEY=gsk_...        # free tier — llama-3.1-8b-instant (recommended for testing)
+OPENAI_API_KEY=sk-...       # gpt-4o-mini
+ANTHROPIC_API_KEY=sk-ant-...  # claude-haiku-4-5-20251001
 ```
 
 ### End-to-end pipeline
@@ -76,6 +79,7 @@ Generates synthetic conversations from the built artifacts.
 | `--n` | `100` | Number of conversations to generate |
 | `--seed` | `42` | Random seed |
 | `--model` | `gpt-4o-mini` | LLM model to use |
+| `--provider` | `auto` | `auto` \| `groq` \| `openai` \| `anthropic` |
 | `--no-cross-conversation-steering` | False | Disable diversity steering (Run A) |
 | `--min-steps` | `2` | Minimum tool steps per chain |
 | `--max-steps` | `5` | Maximum tool steps per chain |

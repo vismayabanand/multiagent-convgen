@@ -229,10 +229,20 @@ class ChainSampler:
             metadata={"target_length": target_length},
         )
 
+    # Endpoint name prefixes that indicate transactional/booking actions.
+    # These should not start a chain — they need a prior search/lookup.
+    _BOOKING_PREFIXES = (
+        "book_", "create_", "add_to_", "submit_", "place_",
+        "register_", "purchase_", "confirm_", "cancel_",
+    )
+
+    def _is_booking_tool(self, tool_id: str) -> bool:
+        endpoint = tool_id.split("/")[-1].lower()
+        return any(endpoint.startswith(p) for p in self._BOOKING_PREFIXES)
+
     def _pick_start(self, c: SamplingConstraint) -> Optional[str]:
         """Select a starting tool node respecting constraints and steering weights."""
         if c.required_tool_ids:
-            # If a specific tool is required, it may be forced as start
             candidates = c.required_tool_ids
         elif c.required_domains:
             candidates = [
@@ -243,6 +253,12 @@ class ChainSampler:
             candidates = self.graph.all_tool_ids
 
         candidates = [c_id for c_id in candidates if c_id not in c.forbidden_tool_ids]
+
+        # Prefer non-booking tools as start nodes — booking tools need prior search results
+        non_booking = [c_id for c_id in candidates if not self._is_booking_tool(c_id)]
+        if non_booking:
+            candidates = non_booking
+
         if not candidates:
             return None
 
